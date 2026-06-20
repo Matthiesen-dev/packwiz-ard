@@ -11,6 +11,7 @@ junit = "5.1.0"
 publish = "0.35.0"
 matthiesen_lib = "1.8.0"
 sponge-mixin = "0.8.5"
+toml4j = "0.7.2"
 
 [plugins]
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
@@ -34,6 +35,7 @@ matthiesen-lib-api-common = { group = "dev.matthiesen", name = "matthiesen-lib-a
 matthiesen-lib-api-fabric = { group = "dev.matthiesen", name = "matthiesen-lib-api-fabric", version.ref = "matthiesen_lib" }
 matthiesen-lib-api-neoforge = { group = "dev.matthiesen", name = "matthiesen-lib-api-neoforge", version.ref = "matthiesen_lib" }
 sponge-mixin = { group = "org.spongepowered", name = "mixin", version.ref = "sponge-mixin" }
+toml4j = { group = "com.moandjiezana.toml", name = "toml4j", version.ref = "toml4j" }
 
 [bundles]
 commonCompileOnly = ["sponge-mixin"]

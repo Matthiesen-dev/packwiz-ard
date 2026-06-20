@@ -26,10 +26,7 @@ dependencies {
     minecraft(libs.minecraft.net)
     mappings(loom.officialMojangMappings())
     neoForge(libs.neoforge)
-
-    libs.bundles.neoforgeModImplementation.get().forEach { dependency ->
-        modImplementation(dependency.copy()) { isTransitive = false }
-    }
+    modImplementation(libs.bundles.neoforgeModImplementation) { isTransitive = false }
 
     implementation(project(":common", configuration = "namedElements"))
     "developmentNeoForge"(project(":common", configuration = "namedElements")) {

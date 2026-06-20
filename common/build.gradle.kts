@@ -11,16 +11,11 @@ architectury {
 dependencies {
     minecraft(libs.minecraft)
     mappings(loom.officialMojangMappings())
+    compileOnly(libs.bundles.commonCompileOnly)
+    modImplementation(libs.bundles.commonModImplementation) { isTransitive = false }
+    implementation(libs.bundles.commonImplementation)
 
-    libs.bundles.commonCompileOnly.get().forEach { dependency ->
-        compileOnly(dependency.copy())
-    }
-    libs.bundles.commonModImplementation.get().forEach { dependency ->
-        modImplementation(dependency.copy()) { isTransitive = false }
-    }
-    libs.bundles.commonImplementation.get().forEach { dependency ->
-        implementation(dependency)
-    }
+    implementation(include(libs.toml4j.get())!!)
 
     testImplementation(libs.junit.api)
     testRuntimeOnly(libs.junit.engine)
