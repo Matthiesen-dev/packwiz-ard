@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${version}",
+  "name": "${mod_name}",
+  "description": "${mod_description}",
+  "authors": [
+    "${mod_author}"
+  ],
+  "license": "${mod_license}",
+  "icon": "icon.png",
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.github_releases": "${github_url}"
+      }
+    }
+  },
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.matthiesen.fabric.template_cobblemon_sidemod.ExampleModFabric"
+    ],
+    "client": [
+      "dev.matthiesen.fabric.template_cobblemon_sidemod.ExampleModFabricClient"
+    ]
+  },
+  "depends": {
+    "minecraft": "1.21.1",
+    "cobblemon": ">=1.7.3 <1.8.0"
+  }
+}

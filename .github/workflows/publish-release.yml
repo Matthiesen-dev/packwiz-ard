@@ -1,0 +1,39 @@
+name: Publish Release to Modrinth
+
+# Minimum Required Secrets:
+# - MODRINTH_TOKEN (Modrinth API token with permissions to create versions)
+# - DISCORD_WEBHOOK_URL (The URL of the Discord webhook to send notifications to)
+
+on:
+  release:
+    types: [ published ]
+
+# The dependencies below correspond to:
+# - Cobblemon (MdwFAVRL)
+# - Matthiesen Lib API (j2JrSWnx)
+# - Matthiesen Lib (cPmFkPpB)
+
+jobs:
+  publish:
+    uses: matthiesen-dev/automation/.github/workflows/simple-publish.yml@main
+    permissions:
+      contents: write
+    with:
+      tag_name: ${{ github.event.release.tag_name }}
+      artifact_basename: "template-cobblemon-sidemod"
+      mod_name: "Template Cobblemon Sidemod"
+      changelog: ${{ github.event.release.body }}
+      fabric_loader_version: "0.17.2+"
+      neoforge_loader_version: "21.1.182+"
+      modrinth_game_version: "1.21.1"
+      modrinth_id: "xxxxxxx"
+      modrinth_dependencies: |-
+        [
+          {"project_id":"MdwFAVRL","dependency_type":"required"},
+          {"project_id":"j2JrSWnx","dependency_type":"required"}
+        ]
+      discord_icon_url: "https://raw.githubusercontent.com/Matthiesen-dev/.github/refs/heads/main/logo-transparent.png"
+    secrets:
+      git_token: ${{ secrets.GITHUB_TOKEN }}
+      MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}

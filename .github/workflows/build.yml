@@ -1,0 +1,10 @@
+name: Build
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  artifact:
+    uses: matthiesen-dev/automation/.github/workflows/ci-artifact.yml@main
