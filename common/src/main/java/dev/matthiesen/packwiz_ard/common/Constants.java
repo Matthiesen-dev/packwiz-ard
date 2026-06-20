@@ -1,11 +1,11 @@
-package dev.matthiesen.common.template_cobblemon_sidemod;
+package dev.matthiesen.packwiz_ard.common;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class Constants {
-    public static final String MOD_ID = "template_cobblemon_sidemod";
-    public static final String ModName = "Template Side-Mod";
+    public static final String MOD_ID = "packwiz_ard";
+    public static final String ModName = "PackWiz-ard";
 
     public static Logger LOGGER = LogManager.getLogger(ModName);
 
