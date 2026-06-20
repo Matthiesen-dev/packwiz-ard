@@ -1,4 +1,4 @@
-# packwiz-ard
+# PackWiz-ard
 
 <div>
   <img src="https://mods.matthiesen.dev/badges/matthiesenLibAPI.svg" alt="Matthiesen Lib API">
