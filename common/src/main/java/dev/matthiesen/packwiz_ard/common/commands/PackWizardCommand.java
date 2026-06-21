@@ -27,11 +27,11 @@ public final class PackWizardCommand extends AbstractCommand {
     private static final Component UPDATE_START_NO_BOOTSTRAP = Component.literal("Downloading the Packwiz Bootstrap and updating the modpack. This may take a while...").withStyle(ChatFormatting.GRAY);
     private static final Component UPDATE_FINISHED = Component.literal("Packwiz has finished updating. Restart for changes to take effect.").withStyle(ChatFormatting.GREEN);
     private static final Component BOOTSTRAP_DOWNLOAD_FINISHED = Component.literal("Bootstrap downloaded successfully.");
-    private static final Component UPDATED_TOML_LINK = Component.literal("Successfully linked a Packwiz modpack. Use /packwiz update for the changes to take effect.").withStyle(ChatFormatting.GREEN);
+    private static final Component UPDATED_TOML_LINK = Component.literal("Successfully linked a Packwiz modpack. Use /packwizard update for the changes to take effect.").withStyle(ChatFormatting.GREEN);
     private static final Component COMMAND_FAILED = Component.literal("Command failed. Check the console for errors.").withStyle(ChatFormatting.RED);
     private static final Component PROCESS_INTERRUPTED = Component.literal("Process was interrupted. Check the console for details.").withStyle(ChatFormatting.RED);
     private static final Component FILE_HANDLING_ERROR = Component.literal("Read/write process failed. Check the console for details.").withStyle(ChatFormatting.RED);
-    private static final Component SET_MIN_PERMISSION_LEVEL = Component.literal("Set minimum permission level required to use the /packwiz command").withStyle(ChatFormatting.GREEN);
+    private static final Component SET_MIN_PERMISSION_LEVEL = Component.literal("Set minimum permission level required to use the /packwizard command").withStyle(ChatFormatting.GREEN);
 
     public static final PackWizardCommand CMD = new PackWizardCommand();
 
