@@ -40,7 +40,7 @@ public final class PackWizardCommon extends AbstractCommonMod {
         var packToml = getConfig().pack_toml;
 
         if (packToml == null || packToml.isEmpty()) {
-            createInfoLog("Failed to load a pack.toml file");
+            getLogger().warn("Failed to load a pack.toml file from config");
         }
 
         registerCommand(PackWizardCommand.CMD);
