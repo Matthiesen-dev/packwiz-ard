@@ -11,7 +11,7 @@ Load and update your server PackWiz modpack with ease
 
 ## Docs
 
-Documentation for this mod can be found at [mods.matthiesen.dev](https://mods.matthiesen.dev/TODO/)
+Documentation for this mod can be found at [mods.matthiesen.dev](https://mods.matthiesen.dev/packwiz-ard/)
 
 ## Version Compatibility
 
