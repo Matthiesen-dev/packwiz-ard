@@ -13,7 +13,7 @@ your server's modpack up to date with the latest versions of mods, and easily ma
 - **Easy updating:** Use the `/packwizard update` command to download and load the mods specified in your `pack.toml` file, and keep them up to date with the latest versions.
 - **Server-side mod:** PackWiz-ard is a server-side mod, so it does not require any client-side installation. This means that players can join your server without needing to install any mods on their end.
 - **Dependency management:** PackWiz-ard will automatically manage your modpack's dependencies, ensuring that all required mods are downloaded and loaded correctly.
-- **Modloader support:** PackWiz-ard supports both Fabric and NeoForge modpacks, so you can use it with a wide variety of modpacks.
+- **Flexible Modloader support:** PackWiz-ard supports both Fabric and NeoForge modpacks, so you can use it with a wide variety of modpacks.
 - **Lightweight:** PackWiz-ard is designed to be lightweight and efficient, so it won't add any unnecessary overhead to your server.
 
 ### Planned/WIP Features
