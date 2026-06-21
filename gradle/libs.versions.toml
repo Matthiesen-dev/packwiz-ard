@@ -39,7 +39,7 @@ toml4j = { group = "com.moandjiezana.toml", name = "toml4j", version.ref = "toml
 
 [bundles]
 commonCompileOnly = ["sponge-mixin"]
-commonImplementation = []
+commonImplementation = ["toml4j"]
 commonModImplementation = ["matthiesen-lib-api-common"]
 fabricModImplementation = ["fabric-loader", "fabric-api"]
 fabricModImplementationNoTransitive = ["matthiesen-lib-api-fabric"]

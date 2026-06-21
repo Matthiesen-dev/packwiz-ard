@@ -24,6 +24,7 @@ dependencies {
 
     testImplementation(libs.junit.api)
     testRuntimeOnly(libs.junit.engine)
+    implementation(include(libs.toml4j.get())!!)
 }
 
 tasks {

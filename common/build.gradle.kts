@@ -15,8 +15,6 @@ dependencies {
     modImplementation(libs.bundles.commonModImplementation) { isTransitive = false }
     implementation(libs.bundles.commonImplementation)
 
-    implementation(include(libs.toml4j.get())!!)
-
     testImplementation(libs.junit.api)
     testRuntimeOnly(libs.junit.engine)
 }
