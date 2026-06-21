@@ -47,7 +47,7 @@ public final class PackWizardCommand extends AbstractCommand {
                                 )
                         )
                         .then("update", update -> update.executes(this::update))
-                        .then("minimumPermissionLovel", minLevel -> minLevel
+                        .then("minimumPermissionLevel", minLevel -> minLevel
                                 .argument("level", IntegerArgumentType.integer(0, 4), level -> level
                                         .executes(this::setMinPermissionLevel)
                                 )
