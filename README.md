@@ -19,6 +19,18 @@ the rest. Just run the `/packwizard update` command to have PackWiz-ard download
 and keep them up to date with the latest versions.
 
 > To learn more about PackWiz checkout their [Documentation](https://packwiz.infra.link/), or their [Github](https://github.com/packwiz/packwiz).
+ 
+## Features
+- **Easy configuration:** Simply provide the URL to your PackWiz `pack.toml` file in the `/config/packwiz_ard/config.json` file.
+- **Easy updating:** Use the `/packwizard update` command to download and load the mods specified in your `pack.toml` file, and keep them up to date with the latest versions.
+- **Server-side mod:** PackWiz-ard is a server-side mod, so it does not require any client-side installation. This means that players can join your server without needing to install any mods on their end.
+- **Dependency management:** PackWiz-ard will automatically manage your modpack's dependencies, ensuring that all required mods are downloaded and loaded correctly.
+- **Modloader support:** PackWiz-ard supports both Fabric and NeoForge modpacks, so you can use it with a wide variety of modpacks.
+- **Lightweight:** PackWiz-ard is designed to be lightweight and efficient, so it won't add any unnecessary overhead to your server.
+
+### Planned/WIP Features
+- **Automatic updates:** PackWiz-ard will automatically check for updates to your modpack and download them in the background, so you don't have to worry about manually running the update command.
+- **WebHook support:** PackWiz-ard will support sending Discord webhooks, allowing you to trigger updates automatically when changes are made to your `pack.toml` file.
 
 ## Docs
 
