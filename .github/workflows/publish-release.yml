@@ -29,7 +29,7 @@ jobs:
         [
           {"project_id":"j2JrSWnx","dependency_type":"required"}
         ]
-      discord_icon_url: "https://raw.githubusercontent.com/Matthiesen-dev/.github/refs/heads/main/logo-transparent.png"
+      discord_icon_url: "https://raw.githubusercontent.com/Matthiesen-dev/.github/refs/heads/main/mod-logos/packwiz-ard.png"
     secrets:
       git_token: ${{ secrets.GITHUB_TOKEN }}
       MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
