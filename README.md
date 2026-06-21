@@ -8,18 +8,6 @@ Load and update your server PackWiz modpack with ease. PackWiz-ard is a server-s
 ecosystem, allowing server owners to easily load and update their modpacks using PackWiz. With PackWiz-ard, you can keep 
 your server's modpack up to date with the latest versions of mods, and easily manage your modpack's dependencies.
 
-## Requirements
-- [Matthiesen Lib API](https://modrinth.com/mod/matthiesen-lib-api)
-
-## PackWiz Integration
-
-PackWiz-ard integrates with the PackWiz ecosystem by using the PackWiz `pack.toml` file to determine which modpack to load and update. 
-To use PackWiz-ard, simply provide the web URL to your PackWiz `pack.toml` file in the mod's config, and PackWiz-ard will take care of 
-the rest. Just run the `/packwizard update` command to have PackWiz-ard download and load the mods specified in your `pack.toml` file, 
-and keep them up to date with the latest versions.
-
-> To learn more about PackWiz checkout their [Documentation](https://packwiz.infra.link/), or their [Github](https://github.com/packwiz/packwiz).
- 
 ## Features
 - **Easy configuration:** Simply provide the URL to your PackWiz `pack.toml` file in the `/config/packwiz_ard/config.json` file.
 - **Easy updating:** Use the `/packwizard update` command to download and load the mods specified in your `pack.toml` file, and keep them up to date with the latest versions.
@@ -31,6 +19,18 @@ and keep them up to date with the latest versions.
 ### Planned/WIP Features
 - **Automatic updates:** PackWiz-ard will automatically check for updates to your modpack and download them in the background, so you don't have to worry about manually running the update command.
 - **WebHook support:** PackWiz-ard will support sending Discord webhooks, allowing you to trigger updates automatically when changes are made to your `pack.toml` file.
+
+## Requirements
+- [Matthiesen Lib API](https://modrinth.com/mod/matthiesen-lib-api)
+
+## PackWiz Integration
+
+PackWiz-ard integrates with the PackWiz ecosystem by using the PackWiz `pack.toml` file to determine which modpack to load and update. 
+To use PackWiz-ard, simply provide the web URL to your PackWiz `pack.toml` file in the mod's config, and PackWiz-ard will take care of 
+the rest. Just run the `/packwizard update` command to have PackWiz-ard download and load the mods specified in your `pack.toml` file, 
+and keep them up to date with the latest versions.
+
+> To learn more about PackWiz checkout their [Documentation](https://packwiz.infra.link/), or their [Github](https://github.com/packwiz/packwiz).
 
 ## Docs
 
