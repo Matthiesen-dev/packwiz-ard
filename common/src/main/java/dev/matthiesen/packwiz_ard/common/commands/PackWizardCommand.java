@@ -197,17 +197,18 @@ public final class PackWizardCommand extends AbstractCommand {
 
         var chatBuilder = new ChatTableBuilder("Auto Update Status", PackWizFormatting);
 
-        chatBuilder.addRow("Enabled", config.auto_update ? "Yes" : "No");
-        chatBuilder.addRow("Update Interval (minutes)", String.valueOf(config.auto_update_interval_minutes));
-        chatBuilder.addRow("Update Running", updateRunning ? "Yes" : "No");
+        chatBuilder = chatBuilder.addRow("Enabled", config.auto_update ? "Yes" : "No");
+        chatBuilder = chatBuilder.addRow("Update Interval (minutes)", String.valueOf(config.auto_update_interval_minutes));
+        chatBuilder = chatBuilder.addRow("Update Running", updateRunning ? "Yes" : "No");
 
         if (!config.auto_update) {
-            chatBuilder.addRow("Next Update", "N/A");
+            output.sendSystemMessage(chatBuilder.build());
             return 1;
         }
 
         if (config.auto_update_interval_minutes <= 0) {
-            chatBuilder.addRow("Next Update", "N/A (invalid interval)");
+            output.sendSystemMessage(chatBuilder.build());
+            output.sendSystemMessage(Component.literal("Automatic updates are enabled, but the update interval is set to 0 or less.").withStyle(ChatFormatting.RED));
             return 0;
         }
 
@@ -217,10 +218,10 @@ public final class PackWizardCommand extends AbstractCommand {
         long remainingSeconds = remainingTicks / 20L;
         long remainingMinutes = (remainingSeconds + 59L) / 60L;
 
-        chatBuilder.addSection("Next Update");
-        chatBuilder.addRow("Interval (minutes)", String.valueOf(remainingMinutes));
-        chatBuilder.addRow("Interval (seconds)", String.valueOf(remainingSeconds));
-        chatBuilder.addRow("Interval (ticks)", String.valueOf(remainingTicks));
+        chatBuilder = chatBuilder.addSection("Next Update");
+        chatBuilder = chatBuilder.addRow("Interval (minutes)", String.valueOf(remainingMinutes));
+        chatBuilder = chatBuilder.addRow("Interval (seconds)", String.valueOf(remainingSeconds));
+        chatBuilder = chatBuilder.addRow("Interval (ticks)", String.valueOf(remainingTicks));
 
         output.sendSystemMessage(chatBuilder.build());
 
