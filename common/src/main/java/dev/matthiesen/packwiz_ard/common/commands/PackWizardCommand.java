@@ -7,6 +7,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.matthiesen.common.matthiesen_lib_api.command.AbstractCommand;
+import dev.matthiesen.common.matthiesen_lib_api.utility.ChatTableBuilder;
 import dev.matthiesen.common.matthiesen_lib_api.utility.CommandBuilder;
 import dev.matthiesen.packwiz_ard.common.PackManager;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
@@ -36,9 +37,17 @@ public final class PackWizardCommand extends AbstractCommand {
     private static final Component SET_MIN_PERMISSION_LEVEL = Component.literal("Set minimum permission level required to use the /packwizard command").withStyle(ChatFormatting.GREEN);
     private static final Component SET_AUTO_UPDATE_ENABLED = Component.literal("Enabled automatic scheduled updates.").withStyle(ChatFormatting.GREEN);
     private static final Component SET_AUTO_UPDATE_DISABLED = Component.literal("Disabled automatic scheduled updates.").withStyle(ChatFormatting.GREEN);
-    private static final Component AUTO_UPDATE_STATUS_PREFIX = Component.literal("Auto update status:").withStyle(ChatFormatting.AQUA);
 
     public static final PackWizardCommand CMD = new PackWizardCommand();
+
+    private static final ChatTableBuilder.Formatting PackWizFormatting = new ChatTableBuilder.Formatting(
+            ChatFormatting.LIGHT_PURPLE,
+            ChatFormatting.AQUA,
+            ChatFormatting.DARK_GRAY,
+            ChatFormatting.YELLOW,
+            ChatFormatting.GRAY,
+            ChatFormatting.WHITE
+    );
 
     @Override
     public void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registry, Commands.CommandSelection context) {
@@ -186,18 +195,19 @@ public final class PackWizardCommand extends AbstractCommand {
         var config = PackWizardCommon.INSTANCE.getConfig();
         boolean updateRunning = PackWizardCommon.PACK_MANAGER.isAsyncTaskRunning(PackManager.UPDATE_PACKWIZ_TASK_NAME);
 
-        output.sendSystemMessage(AUTO_UPDATE_STATUS_PREFIX);
-        output.sendSystemMessage(Component.literal("- enabled: " + config.auto_update).withStyle(ChatFormatting.GRAY));
-        output.sendSystemMessage(Component.literal("- interval_minutes: " + config.auto_update_interval_minutes).withStyle(ChatFormatting.GRAY));
-        output.sendSystemMessage(Component.literal("- update_in_progress: " + updateRunning).withStyle(ChatFormatting.GRAY));
+        var chatBuilder = new ChatTableBuilder("Auto Update Status", PackWizFormatting);
+
+        chatBuilder.addRow("Enabled", config.auto_update ? "Yes" : "No");
+        chatBuilder.addRow("Update Interval (minutes)", String.valueOf(config.auto_update_interval_minutes));
+        chatBuilder.addRow("Update Running", updateRunning ? "Yes" : "No");
 
         if (!config.auto_update) {
-            output.sendSystemMessage(Component.literal("- next_run: disabled").withStyle(ChatFormatting.YELLOW));
+            chatBuilder.addRow("Next Update", "N/A");
             return 1;
         }
 
         if (config.auto_update_interval_minutes <= 0) {
-            output.sendSystemMessage(Component.literal("- next_run: unavailable (invalid interval)").withStyle(ChatFormatting.RED));
+            chatBuilder.addRow("Next Update", "N/A (invalid interval)");
             return 0;
         }
 
@@ -207,9 +217,12 @@ public final class PackWizardCommand extends AbstractCommand {
         long remainingSeconds = remainingTicks / 20L;
         long remainingMinutes = (remainingSeconds + 59L) / 60L;
 
-        output.sendSystemMessage(Component.literal("- next_run_in_ticks: " + remainingTicks).withStyle(ChatFormatting.GRAY));
-        output.sendSystemMessage(Component.literal("- next_run_in_seconds: " + remainingSeconds).withStyle(ChatFormatting.GRAY));
-        output.sendSystemMessage(Component.literal("- next_run_in_minutes: " + remainingMinutes).withStyle(ChatFormatting.GRAY));
+        chatBuilder.addSection("Next Update");
+        chatBuilder.addRow("Interval (minutes)", String.valueOf(remainingMinutes));
+        chatBuilder.addRow("Interval (seconds)", String.valueOf(remainingSeconds));
+        chatBuilder.addRow("Interval (ticks)", String.valueOf(remainingTicks));
+
+        output.sendSystemMessage(chatBuilder.build());
 
         return 1;
     }
