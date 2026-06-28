@@ -24,6 +24,8 @@ public final class PackWizardCommon extends AbstractCommonMod {
             INSTANCE.createConfigManager(PackWizardConfig.class, "config");
 
     private File GAME_DIR_FILE;
+    private long autoUpdateTicks = 0L;
+    private boolean warnedInvalidAutoUpdateInterval = false;
 
     private static final PackWizPlatformService PLATFORM_SERVICE =
             ServiceLoader.load(PackWizPlatformService.class).findFirst().orElseThrow();
@@ -72,6 +74,7 @@ public final class PackWizardCommon extends AbstractCommonMod {
     public Runnable reload() {
         return () -> {
             reloadConfigs();
+            resetAutoUpdateSchedule();
             createInfoLog("Reloading configuration");
         };
     }
@@ -81,8 +84,63 @@ public final class PackWizardCommon extends AbstractCommonMod {
             @Override
             public void onServerTick(MinecraftServer server) {
                 PackWizardCommand.pollCommandStatus();
+                tickAutoUpdate(server);
             }
         };
+    }
+
+    public void resetAutoUpdateSchedule() {
+        autoUpdateTicks = 0L;
+    }
+
+    public long getAutoUpdateTicks() {
+        return autoUpdateTicks;
+    }
+
+    private void tickAutoUpdate(MinecraftServer server) {
+        var config = getConfig();
+
+        if (!config.auto_update) {
+            resetAutoUpdateSchedule();
+            warnedInvalidAutoUpdateInterval = false;
+            return;
+        }
+
+        var packToml = config.pack_toml;
+        if (packToml == null || packToml.isBlank() || !packToml.contains("pack.toml")) {
+            resetAutoUpdateSchedule();
+            return;
+        }
+
+        int intervalMinutes = config.auto_update_interval_minutes;
+        if (intervalMinutes <= 0) {
+            if (!warnedInvalidAutoUpdateInterval) {
+                getLogger().warn("Auto update is enabled, but auto_update_interval_minutes is not positive. Skipping automatic updates.");
+                warnedInvalidAutoUpdateInterval = true;
+            }
+            resetAutoUpdateSchedule();
+            return;
+        }
+
+        warnedInvalidAutoUpdateInterval = false;
+
+        long intervalTicks = (long) intervalMinutes * 1_200L;
+        autoUpdateTicks++;
+
+        if (autoUpdateTicks < intervalTicks) {
+            return;
+        }
+
+        if (PACK_MANAGER.isAsyncTaskRunning(PackManager.UPDATE_PACKWIZ_TASK_NAME)) {
+            return;
+        }
+
+        createInfoLog("Automatic Packwiz update triggered after " + intervalMinutes + " minute(s).");
+
+        boolean started = PACK_MANAGER.update(packToml, PACK_MANAGER.hasBootstrap(), server);
+        if (started) {
+            resetAutoUpdateSchedule();
+        }
     }
 
     public void reloadConfigs() {

@@ -1,7 +1,6 @@
 package dev.matthiesen.packwiz_ard.common;
 
 import com.moandjiezana.toml.Toml;
-import com.mojang.brigadier.context.CommandContext;
 import dev.matthiesen.common.matthiesen_lib_api.MatthiesenLibApi;
 import dev.matthiesen.common.matthiesen_lib_api.core.platform.MatthiesenLibPlatform;
 import dev.matthiesen.packwiz_ard.common.exceptions.FailedHashMatchException;
@@ -9,7 +8,7 @@ import dev.matthiesen.packwiz_ard.common.exceptions.PackTomlUrlException;
 import dev.matthiesen.packwiz_ard.common.exceptions.ProcessExitCodeException;
 import dev.matthiesen.packwiz_ard.common.interfaces.AsyncCommandTask;
 import dev.matthiesen.packwiz_ard.common.util.HashedFileDownloader;
-import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.CommandSource;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -39,7 +38,7 @@ public final class PackManager {
 
     public PackManager() {}
 
-    public void update(String packTomlLink, boolean hasBootstrap, CommandContext<CommandSourceStack> ctx) {
+    public boolean update(String packTomlLink, boolean hasBootstrap, CommandSource output) {
         List<String> command = new ArrayList<>(PACKWIZ_COMMAND_PREFIX);
         boolean isDedicatedServer = MatthiesenLibApi.getEnvironmentType() == MatthiesenLibPlatform.ENVIRONMENT.SERVER;
 
@@ -80,8 +79,11 @@ public final class PackManager {
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
-            }), UPDATE_PACKWIZ_TASK_NAME, 10, ctx));
+            }), UPDATE_PACKWIZ_TASK_NAME, 10, output));
+            return true;
         }
+
+        return false;
     }
 
     public @NotNull URL testPackTomlLink(@NotNull final String packTomlLink) throws PackTomlUrlException {
