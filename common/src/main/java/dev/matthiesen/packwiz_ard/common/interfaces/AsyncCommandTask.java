@@ -1,10 +1,7 @@
 package dev.matthiesen.packwiz_ard.common.interfaces;
 
-import com.mojang.brigadier.context.CommandContext;
-import dev.matthiesen.packwiz_ard.common.util.Helpers;
 import dev.matthiesen.packwiz_ard.common.util.TickCounter;
 import net.minecraft.commands.CommandSource;
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 
 import java.util.concurrent.CompletableFuture;
@@ -15,10 +12,10 @@ public final class AsyncCommandTask {
     private final CommandSource co;
     private final TickCounter tc;
 
-    public AsyncCommandTask(CompletableFuture<Void> future, String name, int pollTicks, CommandContext<CommandSourceStack> ctx) {
+    public AsyncCommandTask(CompletableFuture<Void> future, String name, int pollTicks, CommandSource commandSource) {
         this.future = future;
         this.name = name;
-        this.co = Helpers.getCommandOutput(ctx);
+        this.co = commandSource;
         this.tc = new TickCounter(pollTicks);
     }
 

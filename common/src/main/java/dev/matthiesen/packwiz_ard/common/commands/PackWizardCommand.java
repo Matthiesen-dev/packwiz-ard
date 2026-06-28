@@ -1,6 +1,7 @@
 package dev.matthiesen.packwiz_ard.common.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -15,6 +16,7 @@ import dev.matthiesen.packwiz_ard.common.exceptions.ProcessExitCodeException;
 import dev.matthiesen.packwiz_ard.common.util.Helpers;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandBuildContext;
+import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -32,6 +34,9 @@ public final class PackWizardCommand extends AbstractCommand {
     private static final Component PROCESS_INTERRUPTED = Component.literal("Process was interrupted. Check the console for details.").withStyle(ChatFormatting.RED);
     private static final Component FILE_HANDLING_ERROR = Component.literal("Read/write process failed. Check the console for details.").withStyle(ChatFormatting.RED);
     private static final Component SET_MIN_PERMISSION_LEVEL = Component.literal("Set minimum permission level required to use the /packwizard command").withStyle(ChatFormatting.GREEN);
+    private static final Component SET_AUTO_UPDATE_ENABLED = Component.literal("Enabled automatic scheduled updates.").withStyle(ChatFormatting.GREEN);
+    private static final Component SET_AUTO_UPDATE_DISABLED = Component.literal("Disabled automatic scheduled updates.").withStyle(ChatFormatting.GREEN);
+    private static final Component AUTO_UPDATE_STATUS_PREFIX = Component.literal("Auto update status:").withStyle(ChatFormatting.AQUA);
 
     public static final PackWizardCommand CMD = new PackWizardCommand();
 
@@ -52,6 +57,17 @@ public final class PackWizardCommand extends AbstractCommand {
                                         .executes(this::setMinPermissionLevel)
                                 )
                         )
+                        .then("autoUpdate", autoUpdate -> autoUpdate
+                                .argument("enabled", BoolArgumentType.bool(), enabled -> enabled
+                                        .executes(this::setAutoUpdate)
+                                )
+                        )
+                        .then("autoUpdateInterval", interval -> interval
+                                .argument("minutes", IntegerArgumentType.integer(1), minutes -> minutes
+                                        .executes(this::setAutoUpdateInterval)
+                                )
+                        )
+                        .then("autoUpdateStatus", status -> status.executes(this::autoUpdateStatus))
                         .build()
         );
     }
@@ -90,14 +106,17 @@ public final class PackWizardCommand extends AbstractCommand {
             if (PackWizardCommon.PACK_MANAGER.isAsyncTaskRunning(PackManager.UPDATE_PACKWIZ_TASK_NAME))
                 throw CommandExceptions.UPDATE_IN_PROGRESS_ERROR.create();
 
+            CommandSource output = Helpers.getCommandOutput(context);
             boolean hasBootstrap = PackWizardCommon.PACK_MANAGER.hasBootstrap();
             if (hasBootstrap) {
-                Helpers.getCommandOutput(context).sendSystemMessage(UPDATE_START);
+                output.sendSystemMessage(UPDATE_START);
             } else {
-                Helpers.getCommandOutput(context).sendSystemMessage(UPDATE_START_NO_BOOTSTRAP);
+                output.sendSystemMessage(UPDATE_START_NO_BOOTSTRAP);
             }
 
-            PackWizardCommon.PACK_MANAGER.update(packTomlLink, hasBootstrap, context);
+            if (PackWizardCommon.PACK_MANAGER.update(packTomlLink, hasBootstrap, output)) {
+                PackWizardCommon.INSTANCE.resetAutoUpdateSchedule();
+            }
             return 1;
         } catch (CommandSyntaxException e) {
             PackWizardCommon.INSTANCE.createErrorLog(e.getMessage(), e);
@@ -124,16 +143,88 @@ public final class PackWizardCommand extends AbstractCommand {
         }
     }
 
+    public int setAutoUpdate(CommandContext<CommandSourceStack> context) {
+        try {
+            boolean enabled = BoolArgumentType.getBool(context, "enabled");
+            var configManager = PackWizardCommon.INSTANCE.getConfigManager();
+            var config = configManager.getConfig();
+            config.auto_update = enabled;
+            configManager.setConfig(config);
+            configManager.saveConfig();
+            PackWizardCommon.INSTANCE.resetAutoUpdateSchedule();
+            Helpers.getCommandOutput(context).sendSystemMessage(enabled ? SET_AUTO_UPDATE_ENABLED : SET_AUTO_UPDATE_DISABLED);
+            return 1;
+        } catch (RuntimeException e) {
+            var error = CommandExceptions.FILE_UPDATE_FAILED.create();
+            PackWizardCommon.INSTANCE.createErrorLog(e.getMessage(), e);
+            Helpers.getCommandOutput(context).sendSystemMessage(Component.literal(error.getMessage()).withStyle(ChatFormatting.RED));
+            return 0;
+        }
+    }
+
+    public int setAutoUpdateInterval(CommandContext<CommandSourceStack> context) {
+        try {
+            int minutes = IntegerArgumentType.getInteger(context, "minutes");
+            var configManager = PackWizardCommon.INSTANCE.getConfigManager();
+            var config = configManager.getConfig();
+            config.auto_update_interval_minutes = minutes;
+            configManager.setConfig(config);
+            configManager.saveConfig();
+            PackWizardCommon.INSTANCE.resetAutoUpdateSchedule();
+            Helpers.getCommandOutput(context).sendSystemMessage(Component.literal("Set automatic update interval to " + minutes + " minute(s).").withStyle(ChatFormatting.GREEN));
+            return 1;
+        } catch (RuntimeException e) {
+            var error = CommandExceptions.FILE_UPDATE_FAILED.create();
+            PackWizardCommon.INSTANCE.createErrorLog(e.getMessage(), e);
+            Helpers.getCommandOutput(context).sendSystemMessage(Component.literal(error.getMessage()).withStyle(ChatFormatting.RED));
+            return 0;
+        }
+    }
+
+    public int autoUpdateStatus(CommandContext<CommandSourceStack> context) {
+        var output = Helpers.getCommandOutput(context);
+        var config = PackWizardCommon.INSTANCE.getConfig();
+        boolean updateRunning = PackWizardCommon.PACK_MANAGER.isAsyncTaskRunning(PackManager.UPDATE_PACKWIZ_TASK_NAME);
+
+        output.sendSystemMessage(AUTO_UPDATE_STATUS_PREFIX);
+        output.sendSystemMessage(Component.literal("- enabled: " + config.auto_update).withStyle(ChatFormatting.GRAY));
+        output.sendSystemMessage(Component.literal("- interval_minutes: " + config.auto_update_interval_minutes).withStyle(ChatFormatting.GRAY));
+        output.sendSystemMessage(Component.literal("- update_in_progress: " + updateRunning).withStyle(ChatFormatting.GRAY));
+
+        if (!config.auto_update) {
+            output.sendSystemMessage(Component.literal("- next_run: disabled").withStyle(ChatFormatting.YELLOW));
+            return 1;
+        }
+
+        if (config.auto_update_interval_minutes <= 0) {
+            output.sendSystemMessage(Component.literal("- next_run: unavailable (invalid interval)").withStyle(ChatFormatting.RED));
+            return 0;
+        }
+
+        long intervalTicks = (long) config.auto_update_interval_minutes * 1_200L;
+        long elapsedTicks = Math.max(0L, PackWizardCommon.INSTANCE.getAutoUpdateTicks());
+        long remainingTicks = Math.max(0L, intervalTicks - elapsedTicks);
+        long remainingSeconds = remainingTicks / 20L;
+        long remainingMinutes = (remainingSeconds + 59L) / 60L;
+
+        output.sendSystemMessage(Component.literal("- next_run_in_ticks: " + remainingTicks).withStyle(ChatFormatting.GRAY));
+        output.sendSystemMessage(Component.literal("- next_run_in_seconds: " + remainingSeconds).withStyle(ChatFormatting.GRAY));
+        output.sendSystemMessage(Component.literal("- next_run_in_minutes: " + remainingMinutes).withStyle(ChatFormatting.GRAY));
+
+        return 1;
+    }
+
     public static void pollCommandStatus() {
         var tasksIterator = PackManager.TASKS.listIterator();
-        Exception exception = null;
-        Component message = null;
 
         while (tasksIterator.hasNext()) {
             var task = tasksIterator.next();
             task.tick();
 
             if (task.pollFinished()) {
+                Exception exception = null;
+                Component message = null;
+
                 try {
                     task.getFuture().join();
 
