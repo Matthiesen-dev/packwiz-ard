@@ -1,12 +1,17 @@
 package dev.matthiesen.packwiz_ard.common;
 
+import dev.matthiesen.common.matthiesen_lib_api.MatthiesenLibApi;
 import dev.matthiesen.common.matthiesen_lib_api.abstracts.AbstractCommonMod;
 import dev.matthiesen.common.matthiesen_lib_api.config.ConfigManager;
 import dev.matthiesen.common.matthiesen_lib_api.core.interfaces.MatthiesenLibServerEventHandler;
 import dev.matthiesen.libs.faststats.Token;
 import dev.matthiesen.packwiz_ard.common.commands.PackWizardCommand;
 import dev.matthiesen.packwiz_ard.common.config.PackWizardConfig;
+import dev.matthiesen.packwiz_ard.common.config.WebhooksConfig;
+import dev.matthiesen.packwiz_ard.common.interfaces.IWebhookService;
 import dev.matthiesen.packwiz_ard.common.platform.PackWizPlatformService;
+import dev.matthiesen.packwiz_ard.common.webhook.DiscordWebhookService;
+import dev.matthiesen.packwiz_ard.common.webhook.NoOpWebhookService;
 import net.minecraft.server.MinecraftServer;
 import org.jetbrains.annotations.NotNull;
 
@@ -19,9 +24,12 @@ public final class PackWizardCommon extends AbstractCommonMod {
     private static @Token final String METRICS_TOKEN = "19918d00a0af78c1d5f2b78f1e2807e0";
     public static final PackWizardCommon INSTANCE = new PackWizardCommon();
     public static final PackManager PACK_MANAGER = new PackManager();
+    public IWebhookService discordWebhookService;
 
     private static final ConfigManager<PackWizardConfig> CONFIG_MANAGER =
             INSTANCE.createConfigManager(PackWizardConfig.class, "config");
+    private static final ConfigManager<WebhooksConfig> WEBHOOKS_CONFIG =
+            INSTANCE.createConfigManager(WebhooksConfig.class, "webhooks");
 
     private File GAME_DIR_FILE;
     private long autoUpdateTicks = 0L;
@@ -47,6 +55,13 @@ public final class PackWizardCommon extends AbstractCommonMod {
 
         registerCommand(PackWizardCommand.CMD);
         registerServerEventHandler(getServerEventHandler());
+
+        if (MatthiesenLibApi.isModLoaded("matthiesen_lib_webhooks")) {
+            this.discordWebhookService = new DiscordWebhookService();
+        } else {
+            this.discordWebhookService = new NoOpWebhookService();
+        }
+
         createInfoLog("Initialized");
     }
 
@@ -54,8 +69,16 @@ public final class PackWizardCommon extends AbstractCommonMod {
         return CONFIG_MANAGER.getConfig();
     }
 
+    public WebhooksConfig getWebhooksConfig() {
+        return WEBHOOKS_CONFIG.getConfig();
+    }
+
     public ConfigManager<PackWizardConfig> getConfigManager() {
         return CONFIG_MANAGER;
+    }
+
+    public IWebhookService getWebhookService() {
+        return discordWebhookService;
     }
 
     public File getGameDir() {
@@ -145,5 +168,6 @@ public final class PackWizardCommon extends AbstractCommonMod {
 
     public void reloadConfigs() {
         CONFIG_MANAGER.loadConfig();
+        WEBHOOKS_CONFIG.loadConfig();
     }
 }

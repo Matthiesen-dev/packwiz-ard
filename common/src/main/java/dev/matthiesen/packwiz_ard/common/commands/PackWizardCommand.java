@@ -11,6 +11,7 @@ import dev.matthiesen.common.matthiesen_lib_api.utility.ChatTableBuilder;
 import dev.matthiesen.common.matthiesen_lib_api.utility.CommandBuilder;
 import dev.matthiesen.packwiz_ard.common.PackManager;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
+import dev.matthiesen.packwiz_ard.common.config.WebhooksConfig;
 import dev.matthiesen.packwiz_ard.common.exceptions.FailedHashMatchException;
 import dev.matthiesen.packwiz_ard.common.exceptions.PackTomlUrlException;
 import dev.matthiesen.packwiz_ard.common.exceptions.ProcessExitCodeException;
@@ -23,6 +24,8 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletionException;
 
 public final class PackWizardCommand extends AbstractCommand {
@@ -39,6 +42,36 @@ public final class PackWizardCommand extends AbstractCommand {
     private static final Component SET_AUTO_UPDATE_DISABLED = Component.literal("Disabled automatic scheduled updates.").withStyle(ChatFormatting.GREEN);
 
     public static final PackWizardCommand CMD = new PackWizardCommand();
+
+    private static WebhooksConfig.WebhookMessages getWebhookMessages() {
+        var config = PackWizardCommon.INSTANCE.getWebhooksConfig();
+        return config != null ? config.webhooks : null;
+    }
+
+    private static WebhooksConfig.DiscordEmbedField field(String name, String value) {
+        return new WebhooksConfig.DiscordEmbedField().create(name, value, false);
+    }
+
+    private static void sendConfigWebhook(WebhooksConfig.DiscordEmbed template, List<WebhooksConfig.DiscordEmbedField> extraFields) {
+        if (template == null) {
+            return;
+        }
+
+        List<WebhooksConfig.DiscordEmbedField> fields = new ArrayList<>();
+        if (template.fields != null) {
+            fields.addAll(template.fields);
+        }
+        fields.addAll(extraFields);
+
+        var embed = new WebhooksConfig.DiscordEmbed().create(
+                template.title,
+                template.description,
+                template.color,
+                fields,
+                template.timestamp
+        );
+        PackWizardCommon.INSTANCE.getWebhookService().sendMessage(embed);
+    }
 
     private static final ChatTableBuilder.Formatting PackWizFormatting = new ChatTableBuilder.Formatting(
             ChatFormatting.LIGHT_PURPLE,
@@ -91,9 +124,23 @@ public final class PackWizardCommand extends AbstractCommand {
             var url = PackWizardCommon.PACK_MANAGER.testPackTomlLink(StringArgumentType.getString(context, "url"));
             var configManager = PackWizardCommon.INSTANCE.getConfigManager();
             var config = configManager.getConfig();
+            var oldPackTomlLink = config.pack_toml;
+            var newPackTomlLink = url.toExternalForm();
+
             config.pack_toml = url.toExternalForm();
             configManager.setConfig(config);
             configManager.saveConfig();
+
+            var webhooks = getWebhookMessages();
+            sendConfigWebhook(
+                    webhooks != null ? webhooks.packTomlLinkUpdated : null,
+                    List.of(
+                            field("Updated By", context.getSource().getTextName()),
+                            field("Old Value", oldPackTomlLink == null || oldPackTomlLink.isBlank() ? "(empty)" : oldPackTomlLink),
+                            field("New Value", newPackTomlLink)
+                    )
+            );
+
             Helpers.getCommandOutput(context).sendSystemMessage(UPDATED_TOML_LINK);
             return 1;
         } catch (PackTomlUrlException e) {
@@ -139,9 +186,22 @@ public final class PackWizardCommand extends AbstractCommand {
             int minPermissionLevel = IntegerArgumentType.getInteger(context, "level");
             var configManager = PackWizardCommon.INSTANCE.getConfigManager();
             var config = configManager.getConfig();
+            int oldMinPermissionLevel = config.minimum_permission_level;
+
             config.minimum_permission_level = minPermissionLevel;
             configManager.setConfig(config);
             configManager.saveConfig();
+
+            var webhooks = getWebhookMessages();
+            sendConfigWebhook(
+                    webhooks != null ? webhooks.minimumPermissionLevelUpdated : null,
+                    List.of(
+                            field("Updated By", context.getSource().getTextName()),
+                            field("Old Value", String.valueOf(oldMinPermissionLevel)),
+                            field("New Value", String.valueOf(minPermissionLevel))
+                    )
+            );
+
             Helpers.getCommandOutput(context).sendSystemMessage(SET_MIN_PERMISSION_LEVEL);
             return 1;
         } catch (RuntimeException e) {
@@ -157,10 +217,23 @@ public final class PackWizardCommand extends AbstractCommand {
             boolean enabled = BoolArgumentType.getBool(context, "enabled");
             var configManager = PackWizardCommon.INSTANCE.getConfigManager();
             var config = configManager.getConfig();
+            boolean oldEnabled = config.auto_update;
+
             config.auto_update = enabled;
             configManager.setConfig(config);
             configManager.saveConfig();
             PackWizardCommon.INSTANCE.resetAutoUpdateSchedule();
+
+            var webhooks = getWebhookMessages();
+            sendConfigWebhook(
+                    webhooks != null ? webhooks.autoUpdateUpdated : null,
+                    List.of(
+                            field("Updated By", context.getSource().getTextName()),
+                            field("Old Value", String.valueOf(oldEnabled)),
+                            field("New Value", String.valueOf(enabled))
+                    )
+            );
+
             Helpers.getCommandOutput(context).sendSystemMessage(enabled ? SET_AUTO_UPDATE_ENABLED : SET_AUTO_UPDATE_DISABLED);
             return 1;
         } catch (RuntimeException e) {
@@ -176,10 +249,23 @@ public final class PackWizardCommand extends AbstractCommand {
             int minutes = IntegerArgumentType.getInteger(context, "minutes");
             var configManager = PackWizardCommon.INSTANCE.getConfigManager();
             var config = configManager.getConfig();
+            int oldInterval = config.auto_update_interval_minutes;
+
             config.auto_update_interval_minutes = minutes;
             configManager.setConfig(config);
             configManager.saveConfig();
             PackWizardCommon.INSTANCE.resetAutoUpdateSchedule();
+
+            var webhooks = getWebhookMessages();
+            sendConfigWebhook(
+                    webhooks != null ? webhooks.autoUpdateIntervalUpdated : null,
+                    List.of(
+                            field("Updated By", context.getSource().getTextName()),
+                            field("Old Value", String.valueOf(oldInterval)),
+                            field("New Value", String.valueOf(minutes))
+                    )
+            );
+
             Helpers.getCommandOutput(context).sendSystemMessage(Component.literal("Set automatic update interval to " + minutes + " minute(s).").withStyle(ChatFormatting.GREEN));
             return 1;
         } catch (RuntimeException e) {

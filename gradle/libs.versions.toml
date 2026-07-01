@@ -9,9 +9,10 @@ fabric-api = "0.116.6+1.21.1"
 neoforge = "21.1.182"
 junit = "5.1.0"
 publish = "0.35.0"
-matthiesen_lib = "1.8.0"
+matthiesen_lib = "1.9.2"
 sponge-mixin = "0.8.5"
 toml4j = "0.7.2"
+matthiesen_lib_webhooks = "1.1.0"
 
 [plugins]
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
@@ -36,11 +37,16 @@ matthiesen-lib-api-fabric = { group = "dev.matthiesen", name = "matthiesen-lib-a
 matthiesen-lib-api-neoforge = { group = "dev.matthiesen", name = "matthiesen-lib-api-neoforge", version.ref = "matthiesen_lib" }
 sponge-mixin = { group = "org.spongepowered", name = "mixin", version.ref = "sponge-mixin" }
 toml4j = { group = "com.moandjiezana.toml", name = "toml4j", version.ref = "toml4j" }
+matthiesen-lib-webhooks-common = { group = "dev.matthiesen", name = "matthiesen-lib-webhooks-common", version.ref = "matthiesen_lib_webhooks" }
+matthiesen-lib-webhooks-fabric = { group = "dev.matthiesen", name = "matthiesen-lib-webhooks-fabric", version.ref = "matthiesen_lib_webhooks" }
+matthiesen-lib-webhooks-neoforge = { group = "dev.matthiesen", name = "matthiesen-lib-webhooks-neoforge", version.ref = "matthiesen_lib_webhooks" }
 
 [bundles]
-commonCompileOnly = ["sponge-mixin"]
+commonCompileOnly = ["sponge-mixin", "matthiesen-lib-webhooks-common"]
 commonImplementation = ["toml4j"]
 commonModImplementation = ["matthiesen-lib-api-common"]
 fabricModImplementation = ["fabric-loader", "fabric-api"]
 fabricModImplementationNoTransitive = ["matthiesen-lib-api-fabric"]
+fabricModRuntimeOnly = ["matthiesen-lib-webhooks-fabric"]
 neoforgeModImplementation = ["matthiesen-lib-api-neoforge"]
+neoforgeModRuntimeOnly = ["matthiesen-lib-webhooks-neoforge"]
