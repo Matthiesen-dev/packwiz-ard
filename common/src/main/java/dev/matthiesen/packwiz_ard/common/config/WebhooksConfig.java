@@ -5,7 +5,7 @@ import dev.matthiesen.common.matthiesen_lib_api.core.discord.DiscordColor;
 
 import java.util.List;
 
-public class WebhooksConfig {
+public final class WebhooksConfig {
     @SerializedName("enabled")
     public boolean enabled = false;
 
