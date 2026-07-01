@@ -27,6 +27,7 @@ dependencies {
     mappings(loom.officialMojangMappings())
     neoForge(libs.neoforge)
     modImplementation(libs.bundles.neoforgeModImplementation) { isTransitive = false }
+    modRuntimeOnly(libs.bundles.neoforgeModRuntimeOnly) { isTransitive = false }
 
     implementation(project(":common", configuration = "namedElements"))
     "developmentNeoForge"(project(":common", configuration = "namedElements")) {
