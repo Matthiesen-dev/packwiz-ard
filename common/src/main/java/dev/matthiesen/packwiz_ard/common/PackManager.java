@@ -6,6 +6,7 @@ import dev.matthiesen.common.matthiesen_lib_api.core.platform.MatthiesenLibPlatf
 import dev.matthiesen.packwiz_ard.common.exceptions.FailedHashMatchException;
 import dev.matthiesen.packwiz_ard.common.exceptions.PackTomlUrlException;
 import dev.matthiesen.packwiz_ard.common.exceptions.ProcessExitCodeException;
+import dev.matthiesen.packwiz_ard.common.config.WebhooksConfig;
 import dev.matthiesen.packwiz_ard.common.interfaces.AsyncCommandTask;
 import dev.matthiesen.packwiz_ard.common.util.HashedFileDownloader;
 import net.minecraft.commands.CommandSource;
@@ -38,6 +39,17 @@ public final class PackManager {
 
     public PackManager() {}
 
+    private void sendWebhook(WebhooksConfig.DiscordEmbed embed) {
+        if (embed != null) {
+            PackWizardCommon.INSTANCE.getWebhookService().sendMessage(embed);
+        }
+    }
+
+    private WebhooksConfig.WebhookMessages getWebhookMessages() {
+        var config = PackWizardCommon.INSTANCE.getWebhooksConfig();
+        return config != null ? config.webhooks : null;
+    }
+
     public boolean update(String packTomlLink, boolean hasBootstrap, CommandSource output) {
         List<String> command = new ArrayList<>(PACKWIZ_COMMAND_PREFIX);
         boolean isDedicatedServer = MatthiesenLibApi.getEnvironmentType() == MatthiesenLibPlatform.ENVIRONMENT.SERVER;
@@ -48,25 +60,38 @@ public final class PackManager {
 
         if (!HAS_TASK.test(UPDATE_PACKWIZ_TASK_NAME)) {
             TASKS.add(new AsyncCommandTask(CompletableFuture.runAsync(() -> {
+                var webhooks = getWebhookMessages();
+
                 try {
+                    sendWebhook(webhooks != null ? webhooks.packUpdateTriggered : null);
+
                     if (!hasBootstrap) {
+                        sendWebhook(webhooks != null ? webhooks.bootstrapDownloadTriggered : null);
+
                         var bootstrapPath = Path.of(PackWizardCommon.INSTANCE.getGameDir() + "/packwiz-installer-bootstrap.jar");
                         var downloader = new HashedFileDownloader(BOOTSTRAP_URL, BOOTSTRAP_HASH, bootstrapPath);
 
-                        downloader.download();
-                        if (!downloader.hashesMatch()) {
-                            var bootstrapFile = bootstrapPath.toFile();
+                        try {
+                            downloader.download();
+                            if (!downloader.hashesMatch()) {
+                                var bootstrapFile = bootstrapPath.toFile();
 
-                            if (bootstrapFile.exists()) {
-                                if (!bootstrapFile.delete()) {
-                                    throw new IOException("Cannot verify the integrity of downloaded file 'packwiz-installer-bootstrap.jar'" +
-                                            "Please delete this file manually from your main server directory and replace with the correct file" +
-                                            "from https://github.com/packwiz/packwiz-installer-bootstrap/releases.");
+                                if (bootstrapFile.exists()) {
+                                    if (!bootstrapFile.delete()) {
+                                        throw new IOException("Cannot verify the integrity of downloaded file 'packwiz-installer-bootstrap.jar'" +
+                                                "Please delete this file manually from your main server directory and replace with the correct file" +
+                                                "from https://github.com/packwiz/packwiz-installer-bootstrap/releases.");
+                                    }
                                 }
+                                throw new FailedHashMatchException();
                             }
-                            throw new FailedHashMatchException();
+                            sendWebhook(webhooks != null ? webhooks.bootstrapDownloadFinished : null);
+                        } catch (Exception bootstrapException) {
+                            sendWebhook(webhooks != null ? webhooks.bootstrapDownloadFailed : null);
+                            throw bootstrapException;
                         }
                     }
+
                     testPackTomlLink(packTomlLink);
 
                     var process = new ProcessBuilder(command).inheritIO().start();
@@ -76,7 +101,10 @@ public final class PackManager {
                     int exitCode = process.waitFor();
                     if (exitCode != 0)
                         throw new ProcessExitCodeException("Process failed with exit code: " + exitCode);
+
+                    sendWebhook(webhooks != null ? webhooks.packUpdateFinished : null);
                 } catch (Exception e) {
+                    sendWebhook(webhooks != null ? webhooks.packUpdateFailed : null);
                     throw new RuntimeException(e);
                 }
             }), UPDATE_PACKWIZ_TASK_NAME, 10, output));

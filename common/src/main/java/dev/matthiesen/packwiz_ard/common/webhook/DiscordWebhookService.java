@@ -7,6 +7,7 @@ import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
 import dev.matthiesen.packwiz_ard.common.config.WebhooksConfig;
 import dev.matthiesen.packwiz_ard.common.interfaces.IWebhookService;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,54 +28,62 @@ public final class DiscordWebhookService implements IWebhookService {
         return new MatthiesenLibWebhooks.Webhooks(PackWizardCommon.INSTANCE.getWebhooksConfig().webhookUrl);
     }
 
-    public static Embed parseEventEmbed(WebhooksConfig.DiscordEmbed embed, Context context) {
+    public static String getCurrentTimestamp() {
+        return Instant.now().toString();
+    }
+
+    public static Embed parseEventEmbed(WebhooksConfig baseConfig, WebhooksConfig.DiscordEmbed embed) {
         EmbedBuilder embedBuilder = new EmbedBuilder();
-//        if (embed.title != null)
-//            embedBuilder.withTitle(TextUtils.parse(embed.title, boost));
-//        if (embed.description != null)
-//            embedBuilder.withDescription(TextUtils.parse(embed.description, boost));
+        if (embed.title != null)
+            embedBuilder.withTitle(embed.title);
+        if (embed.description != null)
+            embedBuilder.withDescription(embed.description);
         if (embed.color != null)
             embedBuilder.withColor(embed.color);
         if (embed.timestamp != null)
-            embedBuilder.withTimestamp(embed.timestamp);
+            embedBuilder.withTimestamp(embed.timestamp.replace("%timestamp%", getCurrentTimestamp()));
         List<Embed.EmbedField> fields = new ArrayList<>();
         if (embed.fields != null) {
             for (WebhooksConfig.DiscordEmbedField field : embed.fields) {
                 Embed.EmbedField embedField = new Embed.EmbedField();
-//                if (field.name != null)
-//                    embedField.setName(TextUtils.parse(field.name, boost));
-//                if (field.value != null)
-//                    embedField.setValue(TextUtils.parse(field.value, boost));
+                if (field.name != null)
+                    embedField.setName(field.name);
+                if (field.value != null)
+                    embedField.setValue(field.value);
                 embedField.setInline(field.inline);
                 fields.add(embedField);
             }
             embedBuilder.withFields(fields);
         }
-        if (embed.author != null) {
-            Embed.Author author = new Embed.Author();
-            if (embed.author.name != null) author.setName(embed.author.name);
-            if (embed.author.icon_url != null) author.setIconUrl(embed.author.icon_url);
-            if (embed.author.url != null) author.setUrl(embed.author.url);
-            embedBuilder.withAuthor(author);
-        }
+        String userName = baseConfig.discordAuthorName != null
+                ? baseConfig.discordAuthorName
+                : "PackWiz-ard";
+        String avatarUrl = baseConfig.discordAuthorIconUrl != null
+                ? baseConfig.discordAuthorIconUrl
+                : "https://raw.githubusercontent.com/Matthiesen-dev/.github/refs/heads/main/mod-logos/packwiz-ard.png";
+        Embed.Author author = new Embed.Author();
+        author.setName(userName);
+        author.setIconUrl(avatarUrl);
+        embedBuilder.withAuthor(author);
         return embedBuilder.build();
     }
 
     @Override
-    public void sendMessage(WebhooksConfig.DiscordEmbed embed, Context context) {
+    public void sendMessage(WebhooksConfig.DiscordEmbed embed) {
         if (webhooks == null) return;
+        var baseConfig = PackWizardCommon.INSTANCE.getWebhooksConfig();
         try {
-            String userName = embed.author != null && embed.author.name != null
-                    ? embed.author.name
+            String userName = baseConfig.discordAuthorName != null
+                    ? baseConfig.discordAuthorName
                     : "PackWiz-ard";
-            String avatarUrl = embed.author != null && embed.author.icon_url != null
-                    ? embed.author.icon_url
+            String avatarUrl = baseConfig.discordAuthorIconUrl != null
+                    ? baseConfig.discordAuthorIconUrl
                     : "https://raw.githubusercontent.com/Matthiesen-dev/.github/refs/heads/main/mod-logos/packwiz-ard.png";
 
             webhooks.sendMessage(message -> message
                     .withUsername(userName)
                     .withAvatarUrl(avatarUrl)
-                    .withEmbeds(List.of(parseEventEmbed(embed, context)))
+                    .withEmbeds(List.of(parseEventEmbed(baseConfig, embed)))
             );
         } catch (RuntimeException e) {
             PackWizardCommon.INSTANCE.createErrorLog("Failed to send Discord webhook message! Check your webhook URL and ensure that your server can connect to Discord's servers.", e);

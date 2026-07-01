@@ -21,6 +21,9 @@ your server's modpack up to date with the latest versions of mods, and easily ma
 ## Requirements
 - [Matthiesen Lib API](https://modrinth.com/mod/matthiesen-lib-api)
 
+### Optional Dependencies
+- [Matthiesen Lib Webhooks](https://www.modrinth.com/mod/matthiesen-lib-webhooks) - Used for sending Discord webhooks
+
 ## PackWiz Integration
 
 PackWiz-ard integrates with the PackWiz ecosystem by using the PackWiz `pack.toml` file to determine which modpack to load and update. 

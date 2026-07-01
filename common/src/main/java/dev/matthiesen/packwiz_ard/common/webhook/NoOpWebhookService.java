@@ -10,7 +10,7 @@ public final class NoOpWebhookService implements IWebhookService {
     }
 
     @Override
-    public void sendMessage(WebhooksConfig.DiscordEmbed embed, Context context) {
+    public void sendMessage(WebhooksConfig.DiscordEmbed embed) {
         // No operation performed, as this is a no-op implementation.
     }
 }
