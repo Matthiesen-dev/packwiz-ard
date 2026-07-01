@@ -16,7 +16,7 @@ your server's modpack up to date with the latest versions of mods, and easily ma
 - **Dependency management:** PackWiz-ard will automatically manage your modpack's dependencies, ensuring that all required mods are downloaded and loaded correctly.
 - **Flexible Modloader support:** PackWiz-ard supports both Fabric and NeoForge modpacks, so you can use it with a wide variety of modpacks.
 - **Lightweight:** PackWiz-ard is designed to be lightweight and efficient, so it won't add any unnecessary overhead to your server.
-- **WebHook support:** PackWiz-ard will support sending Discord webhooks, allowing you to trigger updates automatically when changes are made to your `pack.toml` file.
+- **WebHook support:** PackWiz-ard supports sending Discord webhooks, allowing you to notify your discord server when updates are in progress or completed. Or changes to the mod's configuration are made.
 
 ## Requirements
 - [Matthiesen Lib API](https://modrinth.com/mod/matthiesen-lib-api)
