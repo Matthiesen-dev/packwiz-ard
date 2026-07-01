@@ -25,5 +25,8 @@
   "depends": {
     "minecraft": "1.21.1",
     "matthiesen_lib_api": ">=1.9.2 <2.0.0"
+  },
+  "suggests": {
+    "matthiesen_lib_webhooks": ">=1.1.0 <2.0.0"
   }
 }

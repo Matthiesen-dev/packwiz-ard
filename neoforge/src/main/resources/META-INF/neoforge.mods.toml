@@ -33,3 +33,11 @@ mandatory = true
 versionRange = "[1.9.2,)"
 ordering = "AFTER"
 side = "SERVER"
+
+[[dependencies.${mod_id}]]
+modId = "matthiesen_lib_webhooks"
+mandatory = false
+type = "optional"
+versionRange = "[1.1.0,)"
+ordering = "AFTER"
+side = "SERVER"
