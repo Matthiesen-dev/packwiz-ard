@@ -1,8 +1,8 @@
-package dev.matthiesen.packwiz_ard.common.webhook;
+package dev.matthiesen.packwiz_ard.common.server.webhook;
 
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
-import dev.matthiesen.packwiz_ard.common.config.WebhooksConfig;
-import dev.matthiesen.packwiz_ard.common.interfaces.IWebhookService;
+import dev.matthiesen.packwiz_ard.common.shared.config.WebhooksConfig;
+import dev.matthiesen.packwiz_ard.common.shared.interfaces.IWebhookService;
 
 public final class NoOpWebhookService implements IWebhookService {
     public NoOpWebhookService() {

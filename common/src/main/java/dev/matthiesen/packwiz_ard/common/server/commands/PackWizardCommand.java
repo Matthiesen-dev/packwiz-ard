@@ -1,4 +1,4 @@
-package dev.matthiesen.packwiz_ard.common.commands;
+package dev.matthiesen.packwiz_ard.common.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
@@ -9,13 +9,15 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.matthiesen.common.matthiesen_lib_api.command.AbstractCommand;
 import dev.matthiesen.common.matthiesen_lib_api.utility.ChatTableBuilder;
 import dev.matthiesen.common.matthiesen_lib_api.utility.CommandBuilder;
-import dev.matthiesen.packwiz_ard.common.PackManager;
+import dev.matthiesen.packwiz_ard.common.server.PackWizardServerCommon;
+import dev.matthiesen.packwiz_ard.common.shared.PackManager;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
-import dev.matthiesen.packwiz_ard.common.config.WebhooksConfig;
-import dev.matthiesen.packwiz_ard.common.exceptions.FailedHashMatchException;
-import dev.matthiesen.packwiz_ard.common.exceptions.PackTomlUrlException;
-import dev.matthiesen.packwiz_ard.common.exceptions.ProcessExitCodeException;
-import dev.matthiesen.packwiz_ard.common.util.Helpers;
+import dev.matthiesen.packwiz_ard.common.shared.config.WebhooksConfig;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.CommandExceptions;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.FailedHashMatchException;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackTomlUrlException;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.ProcessExitCodeException;
+import dev.matthiesen.packwiz_ard.common.shared.util.Helpers;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSource;
@@ -70,7 +72,7 @@ public final class PackWizardCommand extends AbstractCommand {
                 fields,
                 template.timestamp
         );
-        PackWizardCommon.INSTANCE.getWebhookService().sendMessage(embed);
+        PackWizardServerCommon.getWebhookService().sendMessage(embed);
     }
 
     private static final ChatTableBuilder.Formatting PackWizFormatting = new ChatTableBuilder.Formatting(
@@ -171,7 +173,7 @@ public final class PackWizardCommand extends AbstractCommand {
             }
 
             if (PackWizardCommon.PACK_MANAGER.update(packTomlLink, hasBootstrap, output)) {
-                PackWizardCommon.INSTANCE.resetAutoUpdateSchedule();
+                PackWizardServerCommon.resetAutoUpdateSchedule();
             }
             return 1;
         } catch (CommandSyntaxException e) {
@@ -222,7 +224,7 @@ public final class PackWizardCommand extends AbstractCommand {
             config.auto_update = enabled;
             configManager.setConfig(config);
             configManager.saveConfig();
-            PackWizardCommon.INSTANCE.resetAutoUpdateSchedule();
+            PackWizardServerCommon.resetAutoUpdateSchedule();
 
             var webhooks = getWebhookMessages();
             sendConfigWebhook(
@@ -254,7 +256,7 @@ public final class PackWizardCommand extends AbstractCommand {
             config.auto_update_interval_minutes = minutes;
             configManager.setConfig(config);
             configManager.saveConfig();
-            PackWizardCommon.INSTANCE.resetAutoUpdateSchedule();
+            PackWizardServerCommon.resetAutoUpdateSchedule();
 
             var webhooks = getWebhookMessages();
             sendConfigWebhook(
@@ -299,7 +301,7 @@ public final class PackWizardCommand extends AbstractCommand {
         }
 
         long intervalTicks = (long) config.auto_update_interval_minutes * 1_200L;
-        long elapsedTicks = Math.max(0L, PackWizardCommon.INSTANCE.getAutoUpdateTicks());
+        long elapsedTicks = Math.max(0L, PackWizardServerCommon.getAutoUpdateTicks());
         long remainingTicks = Math.max(0L, intervalTicks - elapsedTicks);
         long remainingSeconds = remainingTicks / 20L;
         long remainingMinutes = (remainingSeconds + 59L) / 60L;

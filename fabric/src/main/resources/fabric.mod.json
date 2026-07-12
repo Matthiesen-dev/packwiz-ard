@@ -20,6 +20,9 @@
   "entrypoints": {
     "main": [
       "dev.matthiesen.packwiz_ard.fabric.PackWizardFabric"
+    ],
+    "server": [
+      "dev.matthiesen.packwiz_ard.fabric.PackWizardServerFabric"
     ]
   },
   "depends": {

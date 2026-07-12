@@ -1,4 +1,4 @@
-package dev.matthiesen.packwiz_ard.common.exceptions;
+package dev.matthiesen.packwiz_ard.common.shared.exceptions;
 
 public class FailedHashMatchException extends Exception {
     public FailedHashMatchException() {

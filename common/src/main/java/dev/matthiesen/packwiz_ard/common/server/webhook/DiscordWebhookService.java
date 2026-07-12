@@ -1,11 +1,11 @@
-package dev.matthiesen.packwiz_ard.common.webhook;
+package dev.matthiesen.packwiz_ard.common.server.webhook;
 
 import dev.matthiesen.common.matthiesen_lib_api.core.discord.model.Embed;
 import dev.matthiesen.common.matthiesen_lib_api.core.discord.model.EmbedBuilder;
 import dev.matthiesen.common.matthiesen_lib_webhooks.MatthiesenLibWebhooks;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
-import dev.matthiesen.packwiz_ard.common.config.WebhooksConfig;
-import dev.matthiesen.packwiz_ard.common.interfaces.IWebhookService;
+import dev.matthiesen.packwiz_ard.common.shared.config.WebhooksConfig;
+import dev.matthiesen.packwiz_ard.common.shared.interfaces.IWebhookService;
 
 import java.time.Instant;
 import java.util.ArrayList;

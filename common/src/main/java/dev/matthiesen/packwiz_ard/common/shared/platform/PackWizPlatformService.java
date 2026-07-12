@@ -1,4 +1,4 @@
-package dev.matthiesen.packwiz_ard.common.platform;
+package dev.matthiesen.packwiz_ard.common.shared.platform;
 
 import java.io.File;
 

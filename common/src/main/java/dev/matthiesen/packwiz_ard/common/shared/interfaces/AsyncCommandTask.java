@@ -1,6 +1,6 @@
-package dev.matthiesen.packwiz_ard.common.interfaces;
+package dev.matthiesen.packwiz_ard.common.shared.interfaces;
 
-import dev.matthiesen.packwiz_ard.common.util.TickCounter;
+import dev.matthiesen.packwiz_ard.common.shared.util.TickCounter;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.network.chat.Component;
 

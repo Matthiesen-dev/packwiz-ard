@@ -1,4 +1,4 @@
-package dev.matthiesen.packwiz_ard.common.util;
+package dev.matthiesen.packwiz_ard.common.shared.util;
 
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSource;

@@ -1,4 +1,4 @@
-package dev.matthiesen.packwiz_ard.common.config;
+package dev.matthiesen.packwiz_ard.common.shared.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

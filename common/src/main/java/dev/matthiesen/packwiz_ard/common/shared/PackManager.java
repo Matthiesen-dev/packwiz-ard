@@ -1,14 +1,16 @@
-package dev.matthiesen.packwiz_ard.common;
+package dev.matthiesen.packwiz_ard.common.shared;
 
 import com.moandjiezana.toml.Toml;
 import dev.matthiesen.common.matthiesen_lib_api.MatthiesenLibApi;
 import dev.matthiesen.common.matthiesen_lib_api.core.platform.MatthiesenLibPlatform;
-import dev.matthiesen.packwiz_ard.common.exceptions.FailedHashMatchException;
-import dev.matthiesen.packwiz_ard.common.exceptions.PackTomlUrlException;
-import dev.matthiesen.packwiz_ard.common.exceptions.ProcessExitCodeException;
-import dev.matthiesen.packwiz_ard.common.config.WebhooksConfig;
-import dev.matthiesen.packwiz_ard.common.interfaces.AsyncCommandTask;
-import dev.matthiesen.packwiz_ard.common.util.HashedFileDownloader;
+import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.FailedHashMatchException;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackTomlUrlException;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.ProcessExitCodeException;
+import dev.matthiesen.packwiz_ard.common.shared.config.WebhooksConfig;
+import dev.matthiesen.packwiz_ard.common.server.PackWizardServerCommon;
+import dev.matthiesen.packwiz_ard.common.shared.interfaces.AsyncCommandTask;
+import dev.matthiesen.packwiz_ard.common.shared.util.HashedFileDownloader;
 import net.minecraft.commands.CommandSource;
 import org.jetbrains.annotations.NotNull;
 
@@ -41,7 +43,7 @@ public final class PackManager {
 
     private void sendWebhook(WebhooksConfig.DiscordEmbed embed) {
         if (embed != null) {
-            PackWizardCommon.INSTANCE.getWebhookService().sendMessage(embed);
+            PackWizardServerCommon.getWebhookService().sendMessage(embed);
         }
     }
 

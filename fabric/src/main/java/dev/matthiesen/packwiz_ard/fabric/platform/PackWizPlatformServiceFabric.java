@@ -1,6 +1,6 @@
 package dev.matthiesen.packwiz_ard.fabric.platform;
 
-import dev.matthiesen.packwiz_ard.common.platform.PackWizPlatformService;
+import dev.matthiesen.packwiz_ard.common.shared.platform.PackWizPlatformService;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.File;
