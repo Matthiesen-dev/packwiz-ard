@@ -24,7 +24,7 @@ public final class PackWizardServerCommon {
             tickAutoUpdate(event.server());
         });
 
-        if (PackWizardCommon.INSTANCE.getCommonUtils().isModLoaded("matthiesen_lib_webhooks")) {
+        if (PackWizardCommon.INSTANCE.getCommonUtils().isModLoaded("matthiesen_core_webhooks")) {
             discordWebhookService = new DiscordWebhookService();
         } else {
             discordWebhookService = new NoOpWebhookService();
