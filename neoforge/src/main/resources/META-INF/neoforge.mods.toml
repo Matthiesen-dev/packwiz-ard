@@ -11,7 +11,7 @@ authors = "${mod_author}"
 description = '''
 ${mod_description}
 '''
-#logoFile = ""
+logoFile = "icon.png"
 
 [[dependencies.${mod_id}]]
 modId = "minecraft"
@@ -28,16 +28,16 @@ ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.${mod_id}]]
-modId = "matthiesen_lib_api"
+modId = "matthiesen_core"
 mandatory = true
-versionRange = "[1.9.2,)"
+versionRange = "[1.0.0-beta.11,)"
 ordering = "AFTER"
 side = "SERVER"
 
 [[dependencies.${mod_id}]]
-modId = "matthiesen_lib_webhooks"
+modId = "matthiesen_core_webhooks"
 mandatory = false
 type = "optional"
-versionRange = "[1.1.0,)"
+versionRange = "[1.2.0,)"
 ordering = "AFTER"
 side = "SERVER"
