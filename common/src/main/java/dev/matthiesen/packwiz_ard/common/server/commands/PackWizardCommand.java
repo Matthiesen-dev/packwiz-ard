@@ -6,9 +6,9 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import dev.matthiesen.common.matthiesen_lib_api.command.AbstractCommand;
-import dev.matthiesen.common.matthiesen_lib_api.utility.ChatTableBuilder;
-import dev.matthiesen.common.matthiesen_lib_api.utility.CommandBuilder;
+import dev.matthiesen.matthiesen_core.common.api.command.CoreCommand;
+import dev.matthiesen.matthiesen_core.common.utility.chat.ChatTableBuilder;
+import dev.matthiesen.matthiesen_core.common.utility.commands.CommandBuilder;
 import dev.matthiesen.packwiz_ard.common.server.PackWizardServerCommon;
 import dev.matthiesen.packwiz_ard.common.shared.PackManager;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
@@ -30,7 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
 
-public final class PackWizardCommand extends AbstractCommand {
+public final class PackWizardCommand implements CoreCommand {
     private static final Component UPDATE_START = Component.literal("Updating modpack. This may take a while...").withStyle(ChatFormatting.GRAY);
     private static final Component UPDATE_START_NO_BOOTSTRAP = Component.literal("Downloading the Packwiz Bootstrap and updating the modpack. This may take a while...").withStyle(ChatFormatting.GRAY);
     private static final Component UPDATE_FINISHED = Component.literal("Packwiz has finished updating. Restart for changes to take effect.").withStyle(ChatFormatting.GREEN);
@@ -114,11 +114,6 @@ public final class PackWizardCommand extends AbstractCommand {
                         .then("autoUpdateStatus", status -> status.executes(this::autoUpdateStatus))
                         .build()
         );
-    }
-
-    @Override
-    public int action(CommandContext<CommandSourceStack> context) {
-        return 0;
     }
 
     private int setTomlLink(CommandContext<CommandSourceStack> context) {
@@ -285,9 +280,9 @@ public final class PackWizardCommand extends AbstractCommand {
 
         var chatBuilder = new ChatTableBuilder("Auto Update Status", PackWizFormatting);
 
-        chatBuilder = chatBuilder.addRow("Enabled", config.auto_update ? "Yes" : "No");
-        chatBuilder = chatBuilder.addRow("Update Interval (minutes)", String.valueOf(config.auto_update_interval_minutes));
-        chatBuilder = chatBuilder.addRow("Update Running", updateRunning ? "Yes" : "No");
+        chatBuilder.addRow("Enabled", config.auto_update ? "Yes" : "No");
+        chatBuilder.addRow("Update Interval (minutes)", String.valueOf(config.auto_update_interval_minutes));
+        chatBuilder.addRow("Update Running", updateRunning ? "Yes" : "No");
 
         if (!config.auto_update) {
             output.sendSystemMessage(chatBuilder.build());
@@ -306,10 +301,10 @@ public final class PackWizardCommand extends AbstractCommand {
         long remainingSeconds = remainingTicks / 20L;
         long remainingMinutes = (remainingSeconds + 59L) / 60L;
 
-        chatBuilder = chatBuilder.addSection("Next Update");
-        chatBuilder = chatBuilder.addRow("Interval (minutes)", String.valueOf(remainingMinutes));
-        chatBuilder = chatBuilder.addRow("Interval (seconds)", String.valueOf(remainingSeconds));
-        chatBuilder = chatBuilder.addRow("Interval (ticks)", String.valueOf(remainingTicks));
+        chatBuilder.addSection("Next Update");
+        chatBuilder.addRow("Interval (minutes)", String.valueOf(remainingMinutes));
+        chatBuilder.addRow("Interval (seconds)", String.valueOf(remainingSeconds));
+        chatBuilder.addRow("Interval (ticks)", String.valueOf(remainingTicks));
 
         output.sendSystemMessage(chatBuilder.build());
 

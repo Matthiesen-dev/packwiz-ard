@@ -1,16 +1,15 @@
 package dev.matthiesen.packwiz_ard.common;
 
-import dev.matthiesen.common.matthiesen_lib_api.abstracts.AbstractCommonMod;
-import dev.matthiesen.common.matthiesen_lib_api.config.ConfigManager;
 import dev.matthiesen.libs.faststats.Token;
+import dev.matthiesen.matthiesen_core.common.AbstractCommonMod;
+import dev.matthiesen.matthiesen_core.common.api.events.PlatformEvents;
+import dev.matthiesen.matthiesen_core.common.utility.config.ConfigManager;
 import dev.matthiesen.packwiz_ard.common.shared.config.PackWizardConfig;
 import dev.matthiesen.packwiz_ard.common.shared.config.WebhooksConfig;
-import dev.matthiesen.packwiz_ard.common.shared.platform.PackWizPlatformService;
 import dev.matthiesen.packwiz_ard.common.shared.PackManager;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.util.ServiceLoader;
 
 public final class PackWizardCommon extends AbstractCommonMod {
     public static final String MOD_ID = "packwiz_ard";
@@ -26,9 +25,6 @@ public final class PackWizardCommon extends AbstractCommonMod {
 
     private File GAME_DIR_FILE;
 
-    private static final PackWizPlatformService PLATFORM_SERVICE =
-            ServiceLoader.load(PackWizPlatformService.class).findFirst().orElseThrow();
-
     public PackWizardCommon() {
         super(MOD_ID, MOD_NAME);
     }
@@ -43,6 +39,8 @@ public final class PackWizardCommon extends AbstractCommonMod {
         if (packToml == null || packToml.isEmpty()) {
             getLogger().warn("Failed to load a pack.toml file from config");
         }
+
+        PlatformEvents.SERVER_RELOAD.subscribe(event -> reload().run());
 
         createInfoLog("Initialized");
     }
@@ -61,7 +59,7 @@ public final class PackWizardCommon extends AbstractCommonMod {
 
     public File getGameDir() {
         if (GAME_DIR_FILE == null) {
-            GAME_DIR_FILE = PLATFORM_SERVICE.getRootDir();
+            GAME_DIR_FILE = getCommonUtils().getGameDirectory().toFile();
         }
         return GAME_DIR_FILE;
     }
@@ -71,7 +69,6 @@ public final class PackWizardCommon extends AbstractCommonMod {
         return METRICS_TOKEN;
     }
 
-    @Override
     public Runnable reload() {
         return () -> {
             reloadConfigs();

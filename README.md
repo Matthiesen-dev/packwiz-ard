@@ -1,7 +1,7 @@
 # PackWiz-ard
 
 <div>
-  <img src="https://mods.matthiesen.dev/badges/matthiesenLibAPI.svg" alt="Matthiesen Lib API">
+  <img src="https://mods.matthiesen.dev/badges/matthiesenCore.svg" alt="Matthiesen Core">
 </div>
 
 Load and update your server PackWiz modpack with ease. PackWiz-ard is a server-side mod that integrates with the PackWiz 
@@ -19,10 +19,12 @@ your server's modpack up to date with the latest versions of mods, and easily ma
 - **WebHook support:** PackWiz-ard supports sending Discord webhooks, allowing you to notify your discord server when updates are in progress or completed. Or changes to the mod's configuration are made.
 
 ## Requirements
-- [Matthiesen Lib API](https://modrinth.com/mod/matthiesen-lib-api)
+
+- [Matthiesen Core](https://modrinth.com/mod/matthiesen-core)
 
 ### Optional Dependencies
-- [Matthiesen Lib Webhooks](https://www.modrinth.com/mod/matthiesen-lib-webhooks) - Used for sending Discord webhooks
+
+- [Matthiesen Core Webhooks](https://www.modrinth.com/mod/matthiesen-core-webhooks) - Used for sending Discord webhooks
 
 ## PackWiz Integration
 
@@ -60,7 +62,7 @@ how this mod is being used and improve it over time. You can learn more about th
 
 You can also view the data collected by this mod on the [FastStats: PackWiz-ard](https://faststats.dev/project/packwiz-ard) page.
 
-To opt out of this data collection, set the `enabled` property to `false` in the `<game_directory>/config/matthiesen_lib_api/metrics.properties` file.
+To opt out of this data collection, set the `enabled` property to `false` in the `<game_directory>/config/matthiesen_core/metrics.properties` file.
 
 ## License
 

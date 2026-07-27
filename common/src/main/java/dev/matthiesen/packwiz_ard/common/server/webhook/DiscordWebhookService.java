@@ -1,8 +1,10 @@
 package dev.matthiesen.packwiz_ard.common.server.webhook;
 
-import dev.matthiesen.common.matthiesen_lib_api.core.discord.model.Embed;
-import dev.matthiesen.common.matthiesen_lib_api.core.discord.model.EmbedBuilder;
-import dev.matthiesen.common.matthiesen_lib_webhooks.MatthiesenLibWebhooks;
+import dev.matthiesen.matthiesen_core.common.api.discord.WebhookNotifierInstance;
+import dev.matthiesen.matthiesen_core.common.api.discord.WebhookNotifierService;
+import dev.matthiesen.matthiesen_core.common.api.exceptions.DiscordWebhookException;
+import dev.matthiesen.matthiesen_core.common.core.discord.model.Embed;
+import dev.matthiesen.matthiesen_core.common.core.discord.model.EmbedBuilder;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
 import dev.matthiesen.packwiz_ard.common.shared.config.WebhooksConfig;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.IWebhookService;
@@ -12,20 +14,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class DiscordWebhookService implements IWebhookService {
-    private static MatthiesenLibWebhooks.Webhooks webhooks;
+    private static WebhookNotifierInstance WEBHOOK_INSTANCE;
 
     public DiscordWebhookService() {
-        webhooks = getClient();
-        PackWizardCommon.INSTANCE.createInfoLog("Matthiesen Lib Webhooks detected, using it for Discord Webhook integration");
+        WebhookNotifierService service = getService();
+        if (service != null) {
+            WEBHOOK_INSTANCE = service.makeInstance(PackWizardCommon.INSTANCE.getWebhooksConfig().webhookUrl);
+            PackWizardCommon.INSTANCE.createInfoLog("Matthiesen Lib Webhooks detected, using it for Discord Webhook integration");
+        }
     }
 
-    public MatthiesenLibWebhooks.Webhooks getClient() {
+    public WebhookNotifierService getService() {
         if (!PackWizardCommon.INSTANCE.getWebhooksConfig().enabled) return null;
         if (!PackWizardCommon.INSTANCE.getWebhooksConfig().webhookUrl.startsWith("https://")) {
             PackWizardCommon.INSTANCE.getLogger().error("Discord webhooks are enabled but an invalid Discord Webhook URL is set! Please check your configuration. (Must start with 'https://')");
             return null;
         }
-        return new MatthiesenLibWebhooks.Webhooks(PackWizardCommon.INSTANCE.getWebhooksConfig().webhookUrl);
+        if (!PackWizardCommon.INSTANCE.getWebhookService().isAvailable()) return null;
+        return PackWizardCommon.INSTANCE.getWebhookService();
     }
 
     public static String getCurrentTimestamp() {
@@ -70,7 +76,7 @@ public final class DiscordWebhookService implements IWebhookService {
 
     @Override
     public void sendMessage(WebhooksConfig.DiscordEmbed embed) {
-        if (webhooks == null) return;
+        if (WEBHOOK_INSTANCE == null) return;
         var baseConfig = PackWizardCommon.INSTANCE.getWebhooksConfig();
         try {
             String userName = baseConfig.discordAuthorName != null
@@ -80,12 +86,12 @@ public final class DiscordWebhookService implements IWebhookService {
                     ? baseConfig.discordAuthorIconUrl
                     : "https://raw.githubusercontent.com/Matthiesen-dev/.github/refs/heads/main/mod-logos/packwiz-ard.png";
 
-            webhooks.sendMessage(message -> message
+            WEBHOOK_INSTANCE.sendMessage(message -> message
                     .withUsername(userName)
                     .withAvatarUrl(avatarUrl)
                     .withEmbeds(List.of(parseEventEmbed(baseConfig, embed)))
             );
-        } catch (RuntimeException e) {
+        } catch (RuntimeException | DiscordWebhookException e) {
             PackWizardCommon.INSTANCE.createErrorLog("Failed to send Discord webhook message! Check your webhook URL and ensure that your server can connect to Discord's servers.", e);
         }
     }

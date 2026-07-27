@@ -1,8 +1,7 @@
 package dev.matthiesen.packwiz_ard.common.shared;
 
 import com.moandjiezana.toml.Toml;
-import dev.matthiesen.common.matthiesen_lib_api.MatthiesenLibApi;
-import dev.matthiesen.common.matthiesen_lib_api.core.platform.MatthiesenLibPlatform;
+import dev.matthiesen.matthiesen_core.common.api.platform.loader.Environment;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.FailedHashMatchException;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackTomlUrlException;
@@ -54,7 +53,7 @@ public final class PackManager {
 
     public boolean update(String packTomlLink, boolean hasBootstrap, CommandSource output) {
         List<String> command = new ArrayList<>(PACKWIZ_COMMAND_PREFIX);
-        boolean isDedicatedServer = MatthiesenLibApi.getEnvironmentType() == MatthiesenLibPlatform.ENVIRONMENT.SERVER;
+        boolean isDedicatedServer = PackWizardCommon.INSTANCE.getCommonUtils().getEnvironment() == Environment.SERVER;
 
         if (isDedicatedServer)
             command.addAll(List.of("-g", "-s", "server"));

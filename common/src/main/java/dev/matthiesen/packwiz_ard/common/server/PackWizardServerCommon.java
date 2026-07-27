@@ -1,7 +1,6 @@
 package dev.matthiesen.packwiz_ard.common.server;
 
-import dev.matthiesen.common.matthiesen_lib_api.MatthiesenLibApi;
-import dev.matthiesen.common.matthiesen_lib_api.core.interfaces.MatthiesenLibServerEventHandler;
+import dev.matthiesen.matthiesen_core.common.api.events.PlatformEvents;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
 import dev.matthiesen.packwiz_ard.common.shared.config.PackWizardConfig;
 import dev.matthiesen.packwiz_ard.common.server.commands.PackWizardCommand;
@@ -18,10 +17,14 @@ public final class PackWizardServerCommon {
     private static IWebhookService discordWebhookService;
 
     public static void initialize() {
-        MatthiesenLibApi.registerCommand(PackWizardCommand.CMD);
-        MatthiesenLibApi.registerServerEventHandler(PackWizardCommon.MOD_ID, getServerEventHandler());
+        PackWizardCommon.INSTANCE.getCommandsRegistryManager().registerCommand(PackWizardCommand.CMD);
 
-        if (MatthiesenLibApi.isModLoaded("matthiesen_lib_webhooks")) {
+        PlatformEvents.SERVER_END_TICK.subscribe(event -> {
+            PackWizardCommand.pollCommandStatus();
+            tickAutoUpdate(event.server());
+        });
+
+        if (PackWizardCommon.INSTANCE.getCommonUtils().isModLoaded("matthiesen_lib_webhooks")) {
             discordWebhookService = new DiscordWebhookService();
         } else {
             discordWebhookService = new NoOpWebhookService();
@@ -30,16 +33,6 @@ public final class PackWizardServerCommon {
 
     public static IWebhookService getWebhookService() {
         return discordWebhookService;
-    }
-
-    public static MatthiesenLibServerEventHandler getServerEventHandler() {
-        return new MatthiesenLibServerEventHandler() {
-            @Override
-            public void onServerTick(MinecraftServer server) {
-                PackWizardCommand.pollCommandStatus();
-                tickAutoUpdate(server);
-            }
-        };
     }
 
     public static void resetAutoUpdateSchedule() {
