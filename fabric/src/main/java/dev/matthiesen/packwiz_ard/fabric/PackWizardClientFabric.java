@@ -3,7 +3,7 @@ package dev.matthiesen.packwiz_ard.fabric;
 import dev.matthiesen.packwiz_ard.common.client.PackWizardClientCommon;
 import net.fabricmc.api.ClientModInitializer;
 
-public class PackWizardClientFabric implements ClientModInitializer {
+public final class PackWizardClientFabric implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         var INSTANCE = PackWizardClientCommon.INSTANCE;
