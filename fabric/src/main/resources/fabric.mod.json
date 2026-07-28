@@ -23,6 +23,9 @@
     ],
     "server": [
       "dev.matthiesen.packwiz_ard.fabric.PackWizardServerFabric"
+    ],
+    "client": [
+      "dev.matthiesen.packwiz_ard.fabric.PackWizardClientFabric"
     ]
   },
   "depends": {
