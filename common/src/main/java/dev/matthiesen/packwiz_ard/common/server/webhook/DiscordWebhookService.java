@@ -6,7 +6,7 @@ import dev.matthiesen.matthiesen_core.common.api.exceptions.DiscordWebhookExcept
 import dev.matthiesen.matthiesen_core.common.core.discord.model.Embed;
 import dev.matthiesen.matthiesen_core.common.core.discord.model.EmbedBuilder;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
-import dev.matthiesen.packwiz_ard.common.shared.config.WebhooksConfig;
+import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.IWebhookService;
 
 import java.time.Instant;
@@ -19,14 +19,14 @@ public final class DiscordWebhookService implements IWebhookService {
     public DiscordWebhookService() {
         WebhookNotifierService service = getService();
         if (service != null) {
-            WEBHOOK_INSTANCE = service.makeInstance(PackWizardCommon.INSTANCE.getWebhooksConfig().webhookUrl);
+            WEBHOOK_INSTANCE = service.makeInstance(PWConfig.SERVER_CONFIG.webhooks_url.get());
             PackWizardCommon.INSTANCE.createInfoLog("Matthiesen Lib Webhooks detected, using it for Discord Webhook integration");
         }
     }
 
     public WebhookNotifierService getService() {
-        if (!PackWizardCommon.INSTANCE.getWebhooksConfig().enabled) return null;
-        if (!PackWizardCommon.INSTANCE.getWebhooksConfig().webhookUrl.startsWith("https://")) {
+        if (!PWConfig.SERVER_CONFIG.webhooks_enabled.getAsBoolean()) return null;
+        if (!PWConfig.SERVER_CONFIG.webhooks_url.get().startsWith("https://")) {
             PackWizardCommon.INSTANCE.getLogger().error("Discord webhooks are enabled but an invalid Discord Webhook URL is set! Please check your configuration. (Must start with 'https://')");
             return null;
         }
@@ -38,7 +38,7 @@ public final class DiscordWebhookService implements IWebhookService {
         return Instant.now().toString();
     }
 
-    public static Embed parseEventEmbed(WebhooksConfig baseConfig, WebhooksConfig.DiscordEmbed embed) {
+    public static Embed parseEventEmbed(PWConfig.DiscordEmbed embed) {
         EmbedBuilder embedBuilder = new EmbedBuilder();
         if (embed.title != null)
             embedBuilder.withTitle(embed.title);
@@ -50,7 +50,7 @@ public final class DiscordWebhookService implements IWebhookService {
             embedBuilder.withTimestamp(embed.timestamp.replace("%timestamp%", getCurrentTimestamp()));
         List<Embed.EmbedField> fields = new ArrayList<>();
         if (embed.fields != null) {
-            for (WebhooksConfig.DiscordEmbedField field : embed.fields) {
+            for (PWConfig.DiscordEmbedField field : embed.fields) {
                 Embed.EmbedField embedField = new Embed.EmbedField();
                 if (field.name != null)
                     embedField.setName(field.name);
@@ -61,11 +61,11 @@ public final class DiscordWebhookService implements IWebhookService {
             }
             embedBuilder.withFields(fields);
         }
-        String userName = baseConfig.discordAuthorName != null
-                ? baseConfig.discordAuthorName
+        String userName = PWConfig.SERVER_CONFIG.webhooks_authorName.get() != null
+                ? PWConfig.SERVER_CONFIG.webhooks_authorName.get()
                 : "PackWiz-ard";
-        String avatarUrl = baseConfig.discordAuthorIconUrl != null
-                ? baseConfig.discordAuthorIconUrl
+        String avatarUrl = PWConfig.SERVER_CONFIG.webhooks_authorIconUrl.get() != null
+                ? PWConfig.SERVER_CONFIG.webhooks_authorIconUrl.get()
                 : "https://raw.githubusercontent.com/Matthiesen-dev/.github/refs/heads/main/mod-logos/packwiz-ard.png";
         Embed.Author author = new Embed.Author();
         author.setName(userName);
@@ -75,21 +75,20 @@ public final class DiscordWebhookService implements IWebhookService {
     }
 
     @Override
-    public void sendMessage(WebhooksConfig.DiscordEmbed embed) {
+    public void sendMessage(PWConfig.DiscordEmbed embed) {
         if (WEBHOOK_INSTANCE == null) return;
-        var baseConfig = PackWizardCommon.INSTANCE.getWebhooksConfig();
         try {
-            String userName = baseConfig.discordAuthorName != null
-                    ? baseConfig.discordAuthorName
+            String userName = PWConfig.SERVER_CONFIG.webhooks_authorName.get() != null
+                    ? PWConfig.SERVER_CONFIG.webhooks_authorName.get()
                     : "PackWiz-ard";
-            String avatarUrl = baseConfig.discordAuthorIconUrl != null
-                    ? baseConfig.discordAuthorIconUrl
+            String avatarUrl = PWConfig.SERVER_CONFIG.webhooks_authorIconUrl.get() != null
+                    ? PWConfig.SERVER_CONFIG.webhooks_authorIconUrl.get()
                     : "https://raw.githubusercontent.com/Matthiesen-dev/.github/refs/heads/main/mod-logos/packwiz-ard.png";
 
             WEBHOOK_INSTANCE.sendMessage(message -> message
                     .withUsername(userName)
                     .withAvatarUrl(avatarUrl)
-                    .withEmbeds(List.of(parseEventEmbed(baseConfig, embed)))
+                    .withEmbeds(List.of(parseEventEmbed(embed)))
             );
         } catch (RuntimeException | DiscordWebhookException e) {
             PackWizardCommon.INSTANCE.createErrorLog("Failed to send Discord webhook message! Check your webhook URL and ensure that your server can connect to Discord's servers.", e);

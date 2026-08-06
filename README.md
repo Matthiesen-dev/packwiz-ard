@@ -9,7 +9,7 @@ ecosystem, allowing server owners to easily load and update their modpacks using
 your server's modpack up to date with the latest versions of mods, and easily manage your modpack's dependencies.
 
 ## Features
-- **Easy configuration:** Simply provide the URL to your PackWiz `pack.toml` file in the `/config/packwiz_ard/config.json` file.
+- **Easy configuration:** Simply provide the URL to your PackWiz `pack.toml` file in the `/config/packwiz_ard/common.toml` file.
 - **Easy updating:** Use the `/packwizard update` command to download and load the mods specified in your `pack.toml` file, and keep them up to date with the latest versions.
 - **Automatic updates:** Enable `auto_update` in the config and set `auto_update_interval_minutes` to run the update process on a schedule.
 - **Server-side mod:** PackWiz-ard is a server-side mod, so it does not require any client-side installation. This means that players can join your server without needing to install any mods on their end.
@@ -21,6 +21,8 @@ your server's modpack up to date with the latest versions of mods, and easily ma
 ## Requirements
 
 - [Matthiesen Core](https://modrinth.com/mod/matthiesen-core)
+- [Fabric API](https://modrinth.com/mod/fabric-api) (Fabric only)
+- [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) (Fabric only)
 
 ### Optional Dependencies
 

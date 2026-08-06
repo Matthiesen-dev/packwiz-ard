@@ -3,10 +3,10 @@ package dev.matthiesen.packwiz_ard.common.shared;
 import com.moandjiezana.toml.Toml;
 import dev.matthiesen.matthiesen_core.common.api.platform.loader.Environment;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
+import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.FailedHashMatchException;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackTomlUrlException;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.ProcessExitCodeException;
-import dev.matthiesen.packwiz_ard.common.shared.config.WebhooksConfig;
 import dev.matthiesen.packwiz_ard.common.server.PackWizardServerCommon;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.AsyncCommandTask;
 import dev.matthiesen.packwiz_ard.common.shared.util.HashedFileDownloader;
@@ -40,15 +40,10 @@ public final class PackManager {
 
     public PackManager() {}
 
-    private void sendWebhook(WebhooksConfig.DiscordEmbed embed) {
+    private void sendWebhook(PWConfig.DiscordEmbed embed) {
         if (embed != null) {
             PackWizardServerCommon.getWebhookService().sendMessage(embed);
         }
-    }
-
-    private WebhooksConfig.WebhookMessages getWebhookMessages() {
-        var config = PackWizardCommon.INSTANCE.getWebhooksConfig();
-        return config != null ? config.webhooks : null;
     }
 
     public boolean update(String packTomlLink, boolean hasBootstrap, CommandSource output) {
@@ -61,13 +56,11 @@ public final class PackManager {
 
         if (!HAS_TASK.test(UPDATE_PACKWIZ_TASK_NAME)) {
             TASKS.add(new AsyncCommandTask(CompletableFuture.runAsync(() -> {
-                var webhooks = getWebhookMessages();
-
                 try {
-                    sendWebhook(webhooks != null ? webhooks.packUpdateTriggered : null);
+                    sendWebhook(PWConfig.getPackUpdateTriggeredEmbed());
 
                     if (!hasBootstrap) {
-                        sendWebhook(webhooks != null ? webhooks.bootstrapDownloadTriggered : null);
+                        sendWebhook(PWConfig.getBootstrapDownloadTriggeredEmbed());
 
                         var bootstrapPath = Path.of(PackWizardCommon.INSTANCE.getGameDir() + "/packwiz-installer-bootstrap.jar");
                         var downloader = new HashedFileDownloader(BOOTSTRAP_URL, BOOTSTRAP_HASH, bootstrapPath);
@@ -86,9 +79,9 @@ public final class PackManager {
                                 }
                                 throw new FailedHashMatchException();
                             }
-                            sendWebhook(webhooks != null ? webhooks.bootstrapDownloadFinished : null);
+                            sendWebhook(PWConfig.getBootstrapDownloadFinishedEmbed());
                         } catch (Exception bootstrapException) {
-                            sendWebhook(webhooks != null ? webhooks.bootstrapDownloadFailed : null);
+                            sendWebhook(PWConfig.getBootstrapDownloadFailedEmbed());
                             throw bootstrapException;
                         }
                     }
@@ -103,9 +96,9 @@ public final class PackManager {
                     if (exitCode != 0)
                         throw new ProcessExitCodeException("Process failed with exit code: " + exitCode);
 
-                    sendWebhook(webhooks != null ? webhooks.packUpdateFinished : null);
+                    sendWebhook(PWConfig.getPackUpdateFinishedEmbed());
                 } catch (Exception e) {
-                    sendWebhook(webhooks != null ? webhooks.packUpdateFailed : null);
+                    sendWebhook(PWConfig.getPackUpdateFailedEmbed());
                     throw new RuntimeException(e);
                 }
             }), UPDATE_PACKWIZ_TASK_NAME, 10, output));

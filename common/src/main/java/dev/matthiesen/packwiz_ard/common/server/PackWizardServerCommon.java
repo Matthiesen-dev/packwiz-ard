@@ -2,7 +2,7 @@ package dev.matthiesen.packwiz_ard.common.server;
 
 import dev.matthiesen.matthiesen_core.common.api.events.PlatformEvents;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
-import dev.matthiesen.packwiz_ard.common.shared.config.PackWizardConfig;
+import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.server.commands.PackWizardCommand;
 import dev.matthiesen.packwiz_ard.common.server.webhook.DiscordWebhookService;
 import dev.matthiesen.packwiz_ard.common.server.webhook.NoOpWebhookService;
@@ -16,12 +16,26 @@ public final class PackWizardServerCommon {
     private static final PackManager PACK_MANAGER = PackWizardCommon.PACK_MANAGER;
     private static IWebhookService discordWebhookService;
 
+    private static boolean isServerRunning = false;
+
     public static void initialize() {
         PackWizardCommon.INSTANCE.getCommandsRegistryManager().registerCommand(PackWizardCommand.CMD);
 
+        PlatformEvents.SERVER_STARTED.subscribe(event -> {
+            var packToml = PWConfig.COMMON_CONFIG.pack_toml.get();
+
+            if (packToml == null || packToml.isEmpty()) {
+                PackWizardCommon.INSTANCE.createWarnLog("Failed to load a pack.toml file from config");
+            }
+
+            isServerRunning = true;
+        });
+
         PlatformEvents.SERVER_END_TICK.subscribe(event -> {
-            PackWizardCommand.pollCommandStatus();
-            tickAutoUpdate(event.server());
+            if (isServerRunning) {
+                PackWizardCommand.pollCommandStatus();
+                tickAutoUpdate(event.server());
+            }
         });
 
         if (PackWizardCommon.INSTANCE.getCommonUtils().isModLoaded("matthiesen_core_webhooks")) {
@@ -43,29 +57,23 @@ public final class PackWizardServerCommon {
         return autoUpdateTicks;
     }
 
-    public static PackWizardConfig getConfig() {
-        return PackWizardCommon.INSTANCE.getConfig();
-    }
-
     private static void tickAutoUpdate(MinecraftServer server) {
-        var config = getConfig();
-
-        if (!config.auto_update) {
+        if (!PWConfig.SERVER_CONFIG.autoUpdate.getAsBoolean()) {
             resetAutoUpdateSchedule();
             warnedInvalidAutoUpdateInterval = false;
             return;
         }
 
-        var packToml = config.pack_toml;
+        var packToml = PWConfig.COMMON_CONFIG.pack_toml.get();
         if (packToml == null || packToml.isBlank() || !packToml.contains("pack.toml")) {
             resetAutoUpdateSchedule();
             return;
         }
 
-        int intervalMinutes = config.auto_update_interval_minutes;
+        int intervalMinutes = PWConfig.SERVER_CONFIG.autoUpdateInterval.getAsInt();
         if (intervalMinutes <= 0) {
             if (!warnedInvalidAutoUpdateInterval) {
-                PackWizardCommon.INSTANCE.getLogger().warn("Auto update is enabled, but auto_update_interval_minutes is not positive. Skipping automatic updates.");
+                PackWizardCommon.INSTANCE.createWarnLog("Auto update is enabled, but auto_update_interval_minutes is not positive. Skipping automatic updates.");
                 warnedInvalidAutoUpdateInterval = true;
             }
             resetAutoUpdateSchedule();

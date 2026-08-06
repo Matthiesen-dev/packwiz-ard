@@ -30,7 +30,7 @@ side = "BOTH"
 [[dependencies.${mod_id}]]
 modId = "matthiesen_core"
 mandatory = true
-versionRange = "[1.0.0-beta.11,)"
+versionRange = "[1.0.0-beta.38,)"
 ordering = "AFTER"
 side = "BOTH"
 

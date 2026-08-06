@@ -12,7 +12,7 @@ import dev.matthiesen.matthiesen_core.common.utility.commands.CommandBuilder;
 import dev.matthiesen.packwiz_ard.common.server.PackWizardServerCommon;
 import dev.matthiesen.packwiz_ard.common.shared.PackManager;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
-import dev.matthiesen.packwiz_ard.common.shared.config.WebhooksConfig;
+import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.CommandExceptions;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.FailedHashMatchException;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackTomlUrlException;
@@ -45,27 +45,20 @@ public final class PackWizardCommand implements CoreCommand {
 
     public static final PackWizardCommand CMD = new PackWizardCommand();
 
-    private static WebhooksConfig.WebhookMessages getWebhookMessages() {
-        var config = PackWizardCommon.INSTANCE.getWebhooksConfig();
-        return config != null ? config.webhooks : null;
+    private static PWConfig.DiscordEmbedField field(String name, String value) {
+        return PWConfig.DiscordEmbedField.create(name, value, false);
     }
 
-    private static WebhooksConfig.DiscordEmbedField field(String name, String value) {
-        return new WebhooksConfig.DiscordEmbedField().create(name, value, false);
-    }
-
-    private static void sendConfigWebhook(WebhooksConfig.DiscordEmbed template, List<WebhooksConfig.DiscordEmbedField> extraFields) {
+    private static void sendConfigWebhook(PWConfig.DiscordEmbed template, List<PWConfig.DiscordEmbedField> extraFields) {
         if (template == null) {
             return;
         }
 
-        List<WebhooksConfig.DiscordEmbedField> fields = new ArrayList<>();
-        if (template.fields != null) {
-            fields.addAll(template.fields);
-        }
+        List<PWConfig.DiscordEmbedField> fields = new ArrayList<>();
+        fields.addAll(template.fields);
         fields.addAll(extraFields);
 
-        var embed = new WebhooksConfig.DiscordEmbed().create(
+        var embed = PWConfig.DiscordEmbed.create(
                 template.title,
                 template.description,
                 template.color,
@@ -86,7 +79,7 @@ public final class PackWizardCommand implements CoreCommand {
 
     @Override
     public void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registry, Commands.CommandSelection context) {
-        int minPermissionLevel = PackWizardCommon.INSTANCE.getConfig().minimum_permission_level;
+        int minPermissionLevel = PWConfig.SERVER_CONFIG.minimumPermissionLevel.getAsInt();
 
         dispatcher.register(
                 new CommandBuilder("packwizard", src -> src.hasPermission(minPermissionLevel))
@@ -119,18 +112,14 @@ public final class PackWizardCommand implements CoreCommand {
     private int setTomlLink(CommandContext<CommandSourceStack> context) {
         try {
             var url = PackWizardCommon.PACK_MANAGER.testPackTomlLink(StringArgumentType.getString(context, "url"));
-            var configManager = PackWizardCommon.INSTANCE.getConfigManager();
-            var config = configManager.getConfig();
-            var oldPackTomlLink = config.pack_toml;
+            var oldPackTomlLink = PWConfig.COMMON_CONFIG.pack_toml.get();
             var newPackTomlLink = url.toExternalForm();
 
-            config.pack_toml = url.toExternalForm();
-            configManager.setConfig(config);
-            configManager.saveConfig();
+            PWConfig.COMMON_CONFIG.pack_toml.set(newPackTomlLink);
+            PWConfig.COMMON_CONFIG.pack_toml.save();
 
-            var webhooks = getWebhookMessages();
             sendConfigWebhook(
-                    webhooks != null ? webhooks.packTomlLinkUpdated : null,
+                    PWConfig.getPackTomlLinkUpdatedEmbed(),
                     List.of(
                             field("Updated By", context.getSource().getTextName()),
                             field("Old Value", oldPackTomlLink == null || oldPackTomlLink.isBlank() ? "(empty)" : oldPackTomlLink),
@@ -153,7 +142,7 @@ public final class PackWizardCommand implements CoreCommand {
             if (!PackWizardCommon.INSTANCE.getGameDir().exists())
                 throw CommandExceptions.DIRECTORY_SECURITY_ERROR.create();
 
-            String packTomlLink = PackWizardCommon.INSTANCE.getConfig().pack_toml;
+            String packTomlLink = PWConfig.COMMON_CONFIG.pack_toml.get();
             if (!packTomlLink.contains("pack.toml"))
                 throw CommandExceptions.NO_PACK_TOML.create();
             if (PackWizardCommon.PACK_MANAGER.isAsyncTaskRunning(PackManager.UPDATE_PACKWIZ_TASK_NAME))
@@ -181,17 +170,13 @@ public final class PackWizardCommand implements CoreCommand {
     public int setMinPermissionLevel(CommandContext<CommandSourceStack> context) {
         try {
             int minPermissionLevel = IntegerArgumentType.getInteger(context, "level");
-            var configManager = PackWizardCommon.INSTANCE.getConfigManager();
-            var config = configManager.getConfig();
-            int oldMinPermissionLevel = config.minimum_permission_level;
+            int oldMinPermissionLevel = PWConfig.SERVER_CONFIG.minimumPermissionLevel.getAsInt();
 
-            config.minimum_permission_level = minPermissionLevel;
-            configManager.setConfig(config);
-            configManager.saveConfig();
+            PWConfig.SERVER_CONFIG.minimumPermissionLevel.set(minPermissionLevel);
+            PWConfig.SERVER_CONFIG.minimumPermissionLevel.save();
 
-            var webhooks = getWebhookMessages();
             sendConfigWebhook(
-                    webhooks != null ? webhooks.minimumPermissionLevelUpdated : null,
+                    PWConfig.getMinimumPermissionLevelUpdatedEmbed(),
                     List.of(
                             field("Updated By", context.getSource().getTextName()),
                             field("Old Value", String.valueOf(oldMinPermissionLevel)),
@@ -212,18 +197,14 @@ public final class PackWizardCommand implements CoreCommand {
     public int setAutoUpdate(CommandContext<CommandSourceStack> context) {
         try {
             boolean enabled = BoolArgumentType.getBool(context, "enabled");
-            var configManager = PackWizardCommon.INSTANCE.getConfigManager();
-            var config = configManager.getConfig();
-            boolean oldEnabled = config.auto_update;
+            boolean oldEnabled = PWConfig.SERVER_CONFIG.autoUpdate.getAsBoolean();
 
-            config.auto_update = enabled;
-            configManager.setConfig(config);
-            configManager.saveConfig();
+            PWConfig.SERVER_CONFIG.autoUpdate.set(enabled);
+            PWConfig.SERVER_CONFIG.autoUpdate.save();
             PackWizardServerCommon.resetAutoUpdateSchedule();
 
-            var webhooks = getWebhookMessages();
             sendConfigWebhook(
-                    webhooks != null ? webhooks.autoUpdateUpdated : null,
+                    PWConfig.getAutoUpdateUpdatedEmbed(),
                     List.of(
                             field("Updated By", context.getSource().getTextName()),
                             field("Old Value", String.valueOf(oldEnabled)),
@@ -244,18 +225,14 @@ public final class PackWizardCommand implements CoreCommand {
     public int setAutoUpdateInterval(CommandContext<CommandSourceStack> context) {
         try {
             int minutes = IntegerArgumentType.getInteger(context, "minutes");
-            var configManager = PackWizardCommon.INSTANCE.getConfigManager();
-            var config = configManager.getConfig();
-            int oldInterval = config.auto_update_interval_minutes;
+            int oldInterval = PWConfig.SERVER_CONFIG.autoUpdateInterval.getAsInt();
 
-            config.auto_update_interval_minutes = minutes;
-            configManager.setConfig(config);
-            configManager.saveConfig();
+            PWConfig.SERVER_CONFIG.autoUpdateInterval.set(minutes);
+            PWConfig.SERVER_CONFIG.autoUpdateInterval.save();
             PackWizardServerCommon.resetAutoUpdateSchedule();
 
-            var webhooks = getWebhookMessages();
             sendConfigWebhook(
-                    webhooks != null ? webhooks.autoUpdateIntervalUpdated : null,
+                    PWConfig.getAutoUpdateIntervalUpdatedEmbed(),
                     List.of(
                             field("Updated By", context.getSource().getTextName()),
                             field("Old Value", String.valueOf(oldInterval)),
@@ -275,27 +252,26 @@ public final class PackWizardCommand implements CoreCommand {
 
     public int autoUpdateStatus(CommandContext<CommandSourceStack> context) {
         var output = Helpers.getCommandOutput(context);
-        var config = PackWizardCommon.INSTANCE.getConfig();
         boolean updateRunning = PackWizardCommon.PACK_MANAGER.isAsyncTaskRunning(PackManager.UPDATE_PACKWIZ_TASK_NAME);
 
         var chatBuilder = new ChatTableBuilder("Auto Update Status", PackWizFormatting);
 
-        chatBuilder.addRow("Enabled", config.auto_update ? "Yes" : "No");
-        chatBuilder.addRow("Update Interval (minutes)", String.valueOf(config.auto_update_interval_minutes));
+        chatBuilder.addRow("Enabled", PWConfig.SERVER_CONFIG.autoUpdate.getAsBoolean() ? "Yes" : "No");
+        chatBuilder.addRow("Update Interval (minutes)", String.valueOf(PWConfig.SERVER_CONFIG.autoUpdateInterval.getAsInt()));
         chatBuilder.addRow("Update Running", updateRunning ? "Yes" : "No");
 
-        if (!config.auto_update) {
+        if (!PWConfig.SERVER_CONFIG.autoUpdate.getAsBoolean()) {
             output.sendSystemMessage(chatBuilder.build());
             return 1;
         }
 
-        if (config.auto_update_interval_minutes <= 0) {
+        if (PWConfig.SERVER_CONFIG.autoUpdateInterval.getAsInt() <= 0) {
             output.sendSystemMessage(chatBuilder.build());
             output.sendSystemMessage(Component.literal("Automatic updates are enabled, but the update interval is set to 0 or less.").withStyle(ChatFormatting.RED));
             return 0;
         }
 
-        long intervalTicks = (long) config.auto_update_interval_minutes * 1_200L;
+        long intervalTicks = (long) PWConfig.SERVER_CONFIG.autoUpdateInterval.getAsInt() * 1_200L;
         long elapsedTicks = Math.max(0L, PackWizardServerCommon.getAutoUpdateTicks());
         long remainingTicks = Math.max(0L, intervalTicks - elapsedTicks);
         long remainingSeconds = remainingTicks / 20L;

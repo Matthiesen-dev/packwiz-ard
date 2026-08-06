@@ -9,9 +9,10 @@ fabric-api = "0.116.6+1.21.1"
 neoforge = "21.1.182"
 junit = "5.1.0"
 publish = "0.35.0"
-matthiesen_core = "1.0.0-beta.11"
+matthiesen_core = "1.0.0-beta.38"
 sponge-mixin = "0.8.5"
 toml4j = "0.7.2"
+forge-config-api-port = "21.1.6"
 
 [plugins]
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
@@ -36,13 +37,17 @@ matthiesen-core-fabric = { group = "dev.matthiesen", name = "matthiesen-core-fab
 matthiesen-core-neoforge = { group = "dev.matthiesen", name = "matthiesen-core-neoforge", version.ref = "matthiesen_core" }
 sponge-mixin = { group = "org.spongepowered", name = "mixin", version.ref = "sponge-mixin" }
 toml4j = { group = "com.moandjiezana.toml", name = "toml4j", version.ref = "toml4j" }
+forge-config-api-port-common = { group = "fuzs.forgeconfigapiport", name = "forgeconfigapiport-common-neoforgeapi", version.ref = "forge-config-api-port" }
+forge-config-api-port-fabric = { group = "fuzs.forgeconfigapiport", name = "forgeconfigapiport-fabric", version.ref = "forge-config-api-port" }
 
 [bundles]
-commonCompileOnly = ["sponge-mixin"]
+commonCompileOnly = ["sponge-mixin", "forge-config-api-port-common"]
 commonImplementation = ["toml4j"]
 commonModImplementation = ["matthiesen-core-common"]
+
 fabricModImplementation = ["fabric-loader", "fabric-api"]
 fabricModImplementationNoTransitive = ["matthiesen-core-fabric"]
-fabricModRuntimeOnly = ["matthiesen-core-fabric"]
+fabricModRuntimeOnly = ["forge-config-api-port-fabric"]
+
 neoforgeModImplementation = ["matthiesen-core-neoforge"]
-neoforgeModRuntimeOnly = ["matthiesen-core-neoforge"]
+neoforgeModRuntimeOnly = []
