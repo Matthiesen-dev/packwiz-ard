@@ -26,7 +26,7 @@ your server's modpack up to date with the latest versions of mods, and easily ma
 
 ### Optional Dependencies
 
-- [Matthiesen Core Webhooks](https://www.modrinth.com/mod/matthiesen-core-webhooks) - Used for sending Discord webhooks
+- [Matthiesen Core Webhooks](https://modrinth.com/project/XP5CfD30) - Used for sending Discord webhooks
 
 ## PackWiz Integration
 
