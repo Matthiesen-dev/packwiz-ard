@@ -7,7 +7,9 @@ public final class PackWizardFabric implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        PackWizardCommon.INSTANCE.createInfoLog("Loading for Fabric Mod Loader");
-        PackWizardCommon.INSTANCE.initialize();
+        var INSTANCE = PackWizardCommon.INSTANCE;
+
+        INSTANCE.createInfoLog("Loading for Fabric Mod Loader");
+        INSTANCE.initialize();
     }
 }

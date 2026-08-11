@@ -1,7 +1,7 @@
 # PackWiz-ard
 
 <div>
-  <img src="https://mods.matthiesen.dev/badges/matthiesenLibAPI.svg" alt="Matthiesen Lib API">
+  <img src="https://mods.matthiesen.dev/badges/matthiesenCore.svg" alt="Matthiesen Core">
 </div>
 
 Load and update your server PackWiz modpack with ease. PackWiz-ard is a server-side mod that integrates with the PackWiz 
@@ -9,7 +9,7 @@ ecosystem, allowing server owners to easily load and update their modpacks using
 your server's modpack up to date with the latest versions of mods, and easily manage your modpack's dependencies.
 
 ## Features
-- **Easy configuration:** Simply provide the URL to your PackWiz `pack.toml` file in the `/config/packwiz_ard/config.json` file.
+- **Easy configuration:** Simply provide the URL to your PackWiz `pack.toml` file in the `/config/packwiz_ard/common.toml` file.
 - **Easy updating:** Use the `/packwizard update` command to download and load the mods specified in your `pack.toml` file, and keep them up to date with the latest versions.
 - **Automatic updates:** Enable `auto_update` in the config and set `auto_update_interval_minutes` to run the update process on a schedule.
 - **Server-side mod:** PackWiz-ard is a server-side mod, so it does not require any client-side installation. This means that players can join your server without needing to install any mods on their end.
@@ -19,10 +19,14 @@ your server's modpack up to date with the latest versions of mods, and easily ma
 - **WebHook support:** PackWiz-ard supports sending Discord webhooks, allowing you to notify your discord server when updates are in progress or completed. Or changes to the mod's configuration are made.
 
 ## Requirements
-- [Matthiesen Lib API](https://modrinth.com/mod/matthiesen-lib-api)
+
+- [Matthiesen Core](https://modrinth.com/mod/matthiesen-core)
+- [Fabric API](https://modrinth.com/mod/fabric-api) (Fabric only)
+- [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) (Fabric only)
 
 ### Optional Dependencies
-- [Matthiesen Lib Webhooks](https://www.modrinth.com/mod/matthiesen-lib-webhooks) - Used for sending Discord webhooks
+
+- [Matthiesen Core Webhooks](https://modrinth.com/project/XP5CfD30) - Used for sending Discord webhooks
 
 ## PackWiz Integration
 
@@ -60,7 +64,7 @@ how this mod is being used and improve it over time. You can learn more about th
 
 You can also view the data collected by this mod on the [FastStats: PackWiz-ard](https://faststats.dev/project/packwiz-ard) page.
 
-To opt out of this data collection, set the `enabled` property to `false` in the `<game_directory>/config/matthiesen_lib_api/metrics.properties` file.
+To opt out of this data collection, set the `enabled` property to `false` in the `<game_directory>/config/matthiesen_core/metrics.properties` file.
 
 ## License
 

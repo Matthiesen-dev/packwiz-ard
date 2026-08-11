@@ -5,8 +5,10 @@ import net.neoforged.fml.common.Mod;
 
 @Mod(PackWizardCommon.MOD_ID)
 public final class PackWizardNeoForge {
+    public static final PackWizardCommon INSTANCE = PackWizardCommon.INSTANCE;
+
     public PackWizardNeoForge() {
-        PackWizardCommon.INSTANCE.createInfoLog("Loading for NeoForge Mod Loader");
-        PackWizardCommon.INSTANCE.initialize();
+        INSTANCE.createInfoLog("Loading for NeoForge Mod Loader");
+        INSTANCE.initialize();
     }
 }

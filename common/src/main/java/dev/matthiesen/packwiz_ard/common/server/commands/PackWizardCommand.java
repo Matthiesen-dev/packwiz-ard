@@ -1,0 +1,334 @@
+package dev.matthiesen.packwiz_ard.common.server.commands;
+
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import dev.matthiesen.matthiesen_core.common.api.command.CoreCommand;
+import dev.matthiesen.matthiesen_core.common.utility.chat.ChatTableBuilder;
+import dev.matthiesen.matthiesen_core.common.utility.commands.CommandBuilder;
+import dev.matthiesen.packwiz_ard.common.server.PackWizardServerCommon;
+import dev.matthiesen.packwiz_ard.common.shared.PackManager;
+import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
+import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.CommandExceptions;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.FailedHashMatchException;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackTomlUrlException;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.ProcessExitCodeException;
+import dev.matthiesen.packwiz_ard.common.shared.util.Helpers;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandBuildContext;
+import net.minecraft.commands.CommandSource;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletionException;
+
+public final class PackWizardCommand implements CoreCommand {
+    private static final Component UPDATE_START = Component.literal("Updating modpack. This may take a while...").withStyle(ChatFormatting.GRAY);
+    private static final Component UPDATE_START_NO_BOOTSTRAP = Component.literal("Downloading the Packwiz Bootstrap and updating the modpack. This may take a while...").withStyle(ChatFormatting.GRAY);
+    private static final Component UPDATE_FINISHED = Component.literal("Packwiz has finished updating. Restart for changes to take effect.").withStyle(ChatFormatting.GREEN);
+    private static final Component BOOTSTRAP_DOWNLOAD_FINISHED = Component.literal("Bootstrap downloaded successfully.");
+    private static final Component UPDATED_TOML_LINK = Component.literal("Successfully linked a Packwiz modpack. Use /packwizard update for the changes to take effect.").withStyle(ChatFormatting.GREEN);
+    private static final Component COMMAND_FAILED = Component.literal("Command failed. Check the console for errors.").withStyle(ChatFormatting.RED);
+    private static final Component PROCESS_INTERRUPTED = Component.literal("Process was interrupted. Check the console for details.").withStyle(ChatFormatting.RED);
+    private static final Component FILE_HANDLING_ERROR = Component.literal("Read/write process failed. Check the console for details.").withStyle(ChatFormatting.RED);
+    private static final Component SET_MIN_PERMISSION_LEVEL = Component.literal("Set minimum permission level required to use the /packwizard command").withStyle(ChatFormatting.GREEN);
+    private static final Component SET_AUTO_UPDATE_ENABLED = Component.literal("Enabled automatic scheduled updates.").withStyle(ChatFormatting.GREEN);
+    private static final Component SET_AUTO_UPDATE_DISABLED = Component.literal("Disabled automatic scheduled updates.").withStyle(ChatFormatting.GREEN);
+
+    public static final PackWizardCommand CMD = new PackWizardCommand();
+
+    private static PWConfig.DiscordEmbedField field(String name, String value) {
+        return PWConfig.DiscordEmbedField.create(name, value, false);
+    }
+
+    private static void sendConfigWebhook(PWConfig.DiscordEmbed template, List<PWConfig.DiscordEmbedField> extraFields) {
+        if (template == null) {
+            return;
+        }
+
+        List<PWConfig.DiscordEmbedField> fields = new ArrayList<>();
+        fields.addAll(template.fields);
+        fields.addAll(extraFields);
+
+        var embed = PWConfig.DiscordEmbed.create(
+                template.title,
+                template.description,
+                template.color,
+                fields,
+                template.timestamp
+        );
+        PackWizardServerCommon.getWebhookService().sendMessage(embed);
+    }
+
+    private static final ChatTableBuilder.Formatting PackWizFormatting = new ChatTableBuilder.Formatting(
+            ChatFormatting.LIGHT_PURPLE,
+            ChatFormatting.AQUA,
+            ChatFormatting.DARK_GRAY,
+            ChatFormatting.YELLOW,
+            ChatFormatting.GRAY,
+            ChatFormatting.WHITE
+    );
+
+    @Override
+    public void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registry, Commands.CommandSelection context) {
+        int minPermissionLevel = PWConfig.SERVER_CONFIG.minimumPermissionLevel.getAsInt();
+
+        dispatcher.register(
+                new CommandBuilder("packwizard", src -> src.hasPermission(minPermissionLevel))
+                        .then("link", link -> link
+                                .argument("url", StringArgumentType.greedyString(), url -> url
+                                        .executes(this::setTomlLink)
+                                )
+                        )
+                        .then("update", update -> update.executes(this::update))
+                        .then("minimumPermissionLevel", minLevel -> minLevel
+                                .argument("level", IntegerArgumentType.integer(0, 4), level -> level
+                                        .executes(this::setMinPermissionLevel)
+                                )
+                        )
+                        .then("autoUpdate", autoUpdate -> autoUpdate
+                                .argument("enabled", BoolArgumentType.bool(), enabled -> enabled
+                                        .executes(this::setAutoUpdate)
+                                )
+                        )
+                        .then("autoUpdateInterval", interval -> interval
+                                .argument("minutes", IntegerArgumentType.integer(1), minutes -> minutes
+                                        .executes(this::setAutoUpdateInterval)
+                                )
+                        )
+                        .then("autoUpdateStatus", status -> status.executes(this::autoUpdateStatus))
+                        .build()
+        );
+    }
+
+    private int setTomlLink(CommandContext<CommandSourceStack> context) {
+        try {
+            var url = PackWizardCommon.PACK_MANAGER.testPackTomlLink(StringArgumentType.getString(context, "url"));
+            var oldPackTomlLink = PWConfig.COMMON_CONFIG.pack_toml.get();
+            var newPackTomlLink = url.toExternalForm();
+
+            PWConfig.COMMON_CONFIG.pack_toml.set(newPackTomlLink);
+            PWConfig.COMMON_CONFIG.pack_toml.save();
+
+            sendConfigWebhook(
+                    PWConfig.getPackTomlLinkUpdatedEmbed(),
+                    List.of(
+                            field("Updated By", context.getSource().getTextName()),
+                            field("Old Value", oldPackTomlLink == null || oldPackTomlLink.isBlank() ? "(empty)" : oldPackTomlLink),
+                            field("New Value", newPackTomlLink)
+                    )
+            );
+
+            Helpers.getCommandOutput(context).sendSystemMessage(UPDATED_TOML_LINK);
+            return 1;
+        } catch (PackTomlUrlException e) {
+            var error = CommandExceptions.FILE_UPDATE_FAILED.create();
+            PackWizardCommon.INSTANCE.createErrorLog(e.getMessage(), e);
+            Helpers.getCommandOutput(context).sendSystemMessage(Component.literal(error.getMessage()).withStyle(ChatFormatting.RED));
+            return 0;
+        }
+    }
+
+    public int update(CommandContext<CommandSourceStack> context) {
+        try {
+            if (!PackWizardCommon.INSTANCE.getGameDir().exists())
+                throw CommandExceptions.DIRECTORY_SECURITY_ERROR.create();
+
+            String packTomlLink = PWConfig.COMMON_CONFIG.pack_toml.get();
+            if (!packTomlLink.contains("pack.toml"))
+                throw CommandExceptions.NO_PACK_TOML.create();
+            if (PackWizardCommon.PACK_MANAGER.isAsyncTaskRunning(PackManager.UPDATE_PACKWIZ_TASK_NAME))
+                throw CommandExceptions.UPDATE_IN_PROGRESS_ERROR.create();
+
+            CommandSource output = Helpers.getCommandOutput(context);
+            boolean hasBootstrap = PackWizardCommon.PACK_MANAGER.hasBootstrap();
+            if (hasBootstrap) {
+                output.sendSystemMessage(UPDATE_START);
+            } else {
+                output.sendSystemMessage(UPDATE_START_NO_BOOTSTRAP);
+            }
+
+            if (PackWizardCommon.PACK_MANAGER.update(packTomlLink, hasBootstrap, output)) {
+                PackWizardServerCommon.resetAutoUpdateSchedule();
+            }
+            return 1;
+        } catch (CommandSyntaxException e) {
+            PackWizardCommon.INSTANCE.createErrorLog(e.getMessage(), e);
+            Helpers.getCommandOutput(context).sendSystemMessage(Component.literal(e.getMessage()).withStyle(ChatFormatting.RED));
+            return 0;
+        }
+    }
+
+    public int setMinPermissionLevel(CommandContext<CommandSourceStack> context) {
+        try {
+            int minPermissionLevel = IntegerArgumentType.getInteger(context, "level");
+            int oldMinPermissionLevel = PWConfig.SERVER_CONFIG.minimumPermissionLevel.getAsInt();
+
+            PWConfig.SERVER_CONFIG.minimumPermissionLevel.set(minPermissionLevel);
+            PWConfig.SERVER_CONFIG.minimumPermissionLevel.save();
+
+            sendConfigWebhook(
+                    PWConfig.getMinimumPermissionLevelUpdatedEmbed(),
+                    List.of(
+                            field("Updated By", context.getSource().getTextName()),
+                            field("Old Value", String.valueOf(oldMinPermissionLevel)),
+                            field("New Value", String.valueOf(minPermissionLevel))
+                    )
+            );
+
+            Helpers.getCommandOutput(context).sendSystemMessage(SET_MIN_PERMISSION_LEVEL);
+            return 1;
+        } catch (RuntimeException e) {
+            var error = CommandExceptions.FILE_UPDATE_FAILED.create();
+            PackWizardCommon.INSTANCE.createErrorLog(e.getMessage(), e);
+            Helpers.getCommandOutput(context).sendSystemMessage(Component.literal(error.getMessage()).withStyle(ChatFormatting.RED));
+            return 0;
+        }
+    }
+
+    public int setAutoUpdate(CommandContext<CommandSourceStack> context) {
+        try {
+            boolean enabled = BoolArgumentType.getBool(context, "enabled");
+            boolean oldEnabled = PWConfig.SERVER_CONFIG.autoUpdate.getAsBoolean();
+
+            PWConfig.SERVER_CONFIG.autoUpdate.set(enabled);
+            PWConfig.SERVER_CONFIG.autoUpdate.save();
+            PackWizardServerCommon.resetAutoUpdateSchedule();
+
+            sendConfigWebhook(
+                    PWConfig.getAutoUpdateUpdatedEmbed(),
+                    List.of(
+                            field("Updated By", context.getSource().getTextName()),
+                            field("Old Value", String.valueOf(oldEnabled)),
+                            field("New Value", String.valueOf(enabled))
+                    )
+            );
+
+            Helpers.getCommandOutput(context).sendSystemMessage(enabled ? SET_AUTO_UPDATE_ENABLED : SET_AUTO_UPDATE_DISABLED);
+            return 1;
+        } catch (RuntimeException e) {
+            var error = CommandExceptions.FILE_UPDATE_FAILED.create();
+            PackWizardCommon.INSTANCE.createErrorLog(e.getMessage(), e);
+            Helpers.getCommandOutput(context).sendSystemMessage(Component.literal(error.getMessage()).withStyle(ChatFormatting.RED));
+            return 0;
+        }
+    }
+
+    public int setAutoUpdateInterval(CommandContext<CommandSourceStack> context) {
+        try {
+            int minutes = IntegerArgumentType.getInteger(context, "minutes");
+            int oldInterval = PWConfig.SERVER_CONFIG.autoUpdateInterval.getAsInt();
+
+            PWConfig.SERVER_CONFIG.autoUpdateInterval.set(minutes);
+            PWConfig.SERVER_CONFIG.autoUpdateInterval.save();
+            PackWizardServerCommon.resetAutoUpdateSchedule();
+
+            sendConfigWebhook(
+                    PWConfig.getAutoUpdateIntervalUpdatedEmbed(),
+                    List.of(
+                            field("Updated By", context.getSource().getTextName()),
+                            field("Old Value", String.valueOf(oldInterval)),
+                            field("New Value", String.valueOf(minutes))
+                    )
+            );
+
+            Helpers.getCommandOutput(context).sendSystemMessage(Component.literal("Set automatic update interval to " + minutes + " minute(s).").withStyle(ChatFormatting.GREEN));
+            return 1;
+        } catch (RuntimeException e) {
+            var error = CommandExceptions.FILE_UPDATE_FAILED.create();
+            PackWizardCommon.INSTANCE.createErrorLog(e.getMessage(), e);
+            Helpers.getCommandOutput(context).sendSystemMessage(Component.literal(error.getMessage()).withStyle(ChatFormatting.RED));
+            return 0;
+        }
+    }
+
+    public int autoUpdateStatus(CommandContext<CommandSourceStack> context) {
+        var output = Helpers.getCommandOutput(context);
+        boolean updateRunning = PackWizardCommon.PACK_MANAGER.isAsyncTaskRunning(PackManager.UPDATE_PACKWIZ_TASK_NAME);
+
+        var chatBuilder = new ChatTableBuilder("Auto Update Status", PackWizFormatting);
+
+        chatBuilder.addRow("Enabled", PWConfig.SERVER_CONFIG.autoUpdate.getAsBoolean() ? "Yes" : "No");
+        chatBuilder.addRow("Update Interval (minutes)", String.valueOf(PWConfig.SERVER_CONFIG.autoUpdateInterval.getAsInt()));
+        chatBuilder.addRow("Update Running", updateRunning ? "Yes" : "No");
+
+        if (!PWConfig.SERVER_CONFIG.autoUpdate.getAsBoolean()) {
+            output.sendSystemMessage(chatBuilder.build());
+            return 1;
+        }
+
+        if (PWConfig.SERVER_CONFIG.autoUpdateInterval.getAsInt() <= 0) {
+            output.sendSystemMessage(chatBuilder.build());
+            output.sendSystemMessage(Component.literal("Automatic updates are enabled, but the update interval is set to 0 or less.").withStyle(ChatFormatting.RED));
+            return 0;
+        }
+
+        long intervalTicks = (long) PWConfig.SERVER_CONFIG.autoUpdateInterval.getAsInt() * 1_200L;
+        long elapsedTicks = Math.max(0L, PackWizardServerCommon.getAutoUpdateTicks());
+        long remainingTicks = Math.max(0L, intervalTicks - elapsedTicks);
+        long remainingSeconds = remainingTicks / 20L;
+        long remainingMinutes = (remainingSeconds + 59L) / 60L;
+
+        chatBuilder.addSection("Next Update");
+        chatBuilder.addRow("Interval (minutes)", String.valueOf(remainingMinutes));
+        chatBuilder.addRow("Interval (seconds)", String.valueOf(remainingSeconds));
+        chatBuilder.addRow("Interval (ticks)", String.valueOf(remainingTicks));
+
+        output.sendSystemMessage(chatBuilder.build());
+
+        return 1;
+    }
+
+    public static void pollCommandStatus() {
+        var tasksIterator = PackManager.TASKS.listIterator();
+
+        while (tasksIterator.hasNext()) {
+            var task = tasksIterator.next();
+            task.tick();
+
+            if (task.pollFinished()) {
+                Exception exception = null;
+                Component message = null;
+
+                try {
+                    task.getFuture().join();
+
+                    if (task.hasName(PackManager.UPDATE_PACKWIZ_TASK_NAME))
+                        message = UPDATE_FINISHED;
+                    else if (task.hasName(PackManager.BOOTSTRAP_TASK_NAME))
+                        message = BOOTSTRAP_DOWNLOAD_FINISHED;
+                } catch (CompletionException e) {
+                    var cause = e.getCause();
+                    exception = e;
+
+                    if (cause instanceof InterruptedException)
+                        message = PROCESS_INTERRUPTED;
+                    else if (cause instanceof IOException)
+                        message = FILE_HANDLING_ERROR;
+
+                    if (task.hasName(PackManager.UPDATE_PACKWIZ_TASK_NAME)) {
+                        if (cause instanceof PackTomlUrlException ptfe)
+                            message = Component.literal(ptfe.getMessage());
+                        else if (cause instanceof ProcessExitCodeException pece)
+                            message = Component.literal(pece.getMessage());
+                        else if (cause instanceof FailedHashMatchException fhme)
+                            message = Component.literal(fhme.getMessage());
+                    }
+                    if (message == null) message = COMMAND_FAILED;
+                }
+                task.sendMessage(message);
+                if (exception != null)
+                    PackWizardCommon.INSTANCE.createErrorLog("Unexpected exception occurred whilst polling Packwiz command status", exception);
+                tasksIterator.remove();
+            }
+        }
+    }
+}
