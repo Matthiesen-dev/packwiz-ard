@@ -46,6 +46,24 @@ public final class PackManager {
         }
     }
 
+    public String getLatestPackTomlHash(String packTomlLink) throws PackTomlUrlException, IOException {
+        URL packTomlUrl = testPackTomlLink(packTomlLink);
+        var connection = packTomlUrl.openConnection();
+        var toml = new Toml().read(connection.getInputStream());
+        return toml.getString("index.hash");
+    }
+
+    public boolean isPackUpdateAvailable(String packTomlLink) {
+        String lastSeenHash = PWConfig.COMMON_CONFIG.lastSeenPackTomlHash.get();
+        try {
+            String currentHash = getLatestPackTomlHash(packTomlLink);
+            return !currentHash.equals(lastSeenHash);
+        } catch (PackTomlUrlException | IOException e) {
+            PackWizardCommon.INSTANCE.createErrorLog("Failed to check for updates: " + e.getMessage());
+            return false;
+        }
+    }
+
     public boolean update(String packTomlLink, boolean hasBootstrap, CommandSource output) {
         List<String> command = new ArrayList<>(PACKWIZ_COMMAND_PREFIX);
         boolean isDedicatedServer = PackWizardCommon.INSTANCE.getCommonUtils().getEnvironment() == Environment.SERVER;
@@ -87,6 +105,7 @@ public final class PackManager {
                     }
 
                     testPackTomlLink(packTomlLink);
+                    String currentHash = getLatestPackTomlHash(packTomlLink);
 
                     var process = new ProcessBuilder(command).inheritIO().start();
                     try (var bufferedReader = process.inputReader()) {
@@ -96,6 +115,7 @@ public final class PackManager {
                     if (exitCode != 0)
                         throw new ProcessExitCodeException("Process failed with exit code: " + exitCode);
 
+                    PWConfig.setPackTomlHash(currentHash);
                     sendWebhook(PWConfig.getPackUpdateFinishedEmbed());
                 } catch (Exception e) {
                     sendWebhook(PWConfig.getPackUpdateFailedEmbed());

@@ -30,6 +30,11 @@ public final class PWConfig {
         CLIENT_SPEC = clientPair.getRight();
     }
 
+    public static void setPackTomlHash(String hash) {
+        COMMON_CONFIG.lastSeenPackTomlHash.set(hash);
+        COMMON_CONFIG.lastSeenPackTomlHash.save();
+    }
+
     public static DiscordEmbed getBootstrapDownloadTriggeredEmbed() {
         return DiscordEmbed.create(
                 SERVER_CONFIG.webhooks_bootstrap_downloadTriggered_title.get(),
