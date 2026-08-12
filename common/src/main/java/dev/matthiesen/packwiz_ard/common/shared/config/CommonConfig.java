@@ -5,6 +5,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 public final class CommonConfig {
 
     public ModConfigSpec.ConfigValue<String> pack_toml;
+    public ModConfigSpec.ConfigValue<String> lastSeenPackTomlHash;
 
     public CommonConfig(ModConfigSpec.Builder builder) {
         builder.comment("Common config").push("common");
@@ -15,6 +16,11 @@ public final class CommonConfig {
                         "If this is not set, the mod will not be able to check for updates or download the pack.toml file"
                 )
                 .define("pack_toml", "");
+        lastSeenPackTomlHash = builder.comment(
+                        "The last seen hash of the pack.toml file",
+                        "This is used to check for updates and download the pack.toml file"
+                )
+                .define("lastSeenPackTomlHash", "");
 
         builder.pop();
     }
