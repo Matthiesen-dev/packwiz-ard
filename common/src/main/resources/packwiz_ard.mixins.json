@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "dev.matthiesen.packwiz_ard.common.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "TitleScreenMixin",
+    "MinecraftMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
+
+

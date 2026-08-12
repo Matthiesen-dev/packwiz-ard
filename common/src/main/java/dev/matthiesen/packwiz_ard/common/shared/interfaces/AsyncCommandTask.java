@@ -1,21 +1,21 @@
 package dev.matthiesen.packwiz_ard.common.shared.interfaces;
 
 import dev.matthiesen.packwiz_ard.common.shared.util.TickCounter;
-import net.minecraft.commands.CommandSource;
 import net.minecraft.network.chat.Component;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 public final class AsyncCommandTask {
     private final String name;
     private final CompletableFuture<Void> future;
-    private final CommandSource co;
+    private final Consumer<Component> messageSink;
     private final TickCounter tc;
 
-    public AsyncCommandTask(CompletableFuture<Void> future, String name, int pollTicks, CommandSource commandSource) {
+    public AsyncCommandTask(CompletableFuture<Void> future, String name, int pollTicks, Consumer<Component> messageSink) {
         this.future = future;
         this.name = name;
-        this.co = commandSource;
+        this.messageSink = messageSink;
         this.tc = new TickCounter(pollTicks);
     }
 
@@ -27,7 +27,7 @@ public final class AsyncCommandTask {
 
     public void sendMessage(Component message) {
         if (future.isDone())
-            co.sendSystemMessage(message);
+            messageSink.accept(message);
     }
 
     public CompletableFuture<Void> getFuture() { return future; }

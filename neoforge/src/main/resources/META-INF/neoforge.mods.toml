@@ -13,28 +13,31 @@ ${mod_description}
 '''
 logoFile = "icon.png"
 
-[[dependencies.${mod_id}]]
+[[mixins]]
+config = "packwiz_ard.mixins.json"
+
+[[dependencies.packwiz_ard]]
 modId = "minecraft"
 mandatory = true
 versionRange = "[1.21.1]"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.${mod_id}]]
+[[dependencies.packwiz_ard]]
 modId = "neoforge"
 mandatory = true
 versionRange = "[21.1.182,)"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.${mod_id}]]
+[[dependencies.packwiz_ard]]
 modId = "matthiesen_core"
 mandatory = true
 versionRange = "[1.0.0-beta.38,)"
 ordering = "AFTER"
 side = "BOTH"
 
-[[dependencies.${mod_id}]]
+[[dependencies.packwiz_ard]]
 modId = "matthiesen_core_webhooks"
 mandatory = false
 type = "optional"

@@ -14,9 +14,7 @@ import dev.matthiesen.packwiz_ard.common.shared.PackManager;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
 import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.CommandExceptions;
-import dev.matthiesen.packwiz_ard.common.shared.exceptions.FailedHashMatchException;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackTomlUrlException;
-import dev.matthiesen.packwiz_ard.common.shared.exceptions.ProcessExitCodeException;
 import dev.matthiesen.packwiz_ard.common.shared.util.Helpers;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandBuildContext;
@@ -25,20 +23,13 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletionException;
 
 public final class PackWizardCommand implements CoreCommand {
     private static final Component UPDATE_START = Component.literal("Updating modpack. This may take a while...").withStyle(ChatFormatting.GRAY);
     private static final Component UPDATE_START_NO_BOOTSTRAP = Component.literal("Downloading the Packwiz Bootstrap and updating the modpack. This may take a while...").withStyle(ChatFormatting.GRAY);
-    private static final Component UPDATE_FINISHED = Component.literal("Packwiz has finished updating. Restart for changes to take effect.").withStyle(ChatFormatting.GREEN);
-    private static final Component BOOTSTRAP_DOWNLOAD_FINISHED = Component.literal("Bootstrap downloaded successfully.");
     private static final Component UPDATED_TOML_LINK = Component.literal("Successfully linked a Packwiz modpack. Use /packwizard update for the changes to take effect.").withStyle(ChatFormatting.GREEN);
-    private static final Component COMMAND_FAILED = Component.literal("Command failed. Check the console for errors.").withStyle(ChatFormatting.RED);
-    private static final Component PROCESS_INTERRUPTED = Component.literal("Process was interrupted. Check the console for details.").withStyle(ChatFormatting.RED);
-    private static final Component FILE_HANDLING_ERROR = Component.literal("Read/write process failed. Check the console for details.").withStyle(ChatFormatting.RED);
     private static final Component SET_MIN_PERMISSION_LEVEL = Component.literal("Set minimum permission level required to use the /packwizard command").withStyle(ChatFormatting.GREEN);
     private static final Component SET_AUTO_UPDATE_ENABLED = Component.literal("Enabled automatic scheduled updates.").withStyle(ChatFormatting.GREEN);
     private static final Component SET_AUTO_UPDATE_DISABLED = Component.literal("Disabled automatic scheduled updates.").withStyle(ChatFormatting.GREEN);
@@ -287,48 +278,4 @@ public final class PackWizardCommand implements CoreCommand {
         return 1;
     }
 
-    public static void pollCommandStatus() {
-        var tasksIterator = PackManager.TASKS.listIterator();
-
-        while (tasksIterator.hasNext()) {
-            var task = tasksIterator.next();
-            task.tick();
-
-            if (task.pollFinished()) {
-                Exception exception = null;
-                Component message = null;
-
-                try {
-                    task.getFuture().join();
-
-                    if (task.hasName(PackManager.UPDATE_PACKWIZ_TASK_NAME))
-                        message = UPDATE_FINISHED;
-                    else if (task.hasName(PackManager.BOOTSTRAP_TASK_NAME))
-                        message = BOOTSTRAP_DOWNLOAD_FINISHED;
-                } catch (CompletionException e) {
-                    var cause = e.getCause();
-                    exception = e;
-
-                    if (cause instanceof InterruptedException)
-                        message = PROCESS_INTERRUPTED;
-                    else if (cause instanceof IOException)
-                        message = FILE_HANDLING_ERROR;
-
-                    if (task.hasName(PackManager.UPDATE_PACKWIZ_TASK_NAME)) {
-                        if (cause instanceof PackTomlUrlException ptfe)
-                            message = Component.literal(ptfe.getMessage());
-                        else if (cause instanceof ProcessExitCodeException pece)
-                            message = Component.literal(pece.getMessage());
-                        else if (cause instanceof FailedHashMatchException fhme)
-                            message = Component.literal(fhme.getMessage());
-                    }
-                    if (message == null) message = COMMAND_FAILED;
-                }
-                task.sendMessage(message);
-                if (exception != null)
-                    PackWizardCommon.INSTANCE.createErrorLog("Unexpected exception occurred whilst polling Packwiz command status", exception);
-                tasksIterator.remove();
-            }
-        }
-    }
 }

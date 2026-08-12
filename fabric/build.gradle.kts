@@ -17,7 +17,7 @@ dependencies {
     mappings(loom.officialMojangMappings())
     modImplementation(libs.bundles.fabricModImplementation)
     modImplementation(libs.bundles.fabricModImplementationNoTransitive) { isTransitive = false }
-    modRuntimeOnly(libs.bundles.fabricModRuntimeOnly) { isTransitive = false }
+    modRuntimeOnly(libs.bundles.fabricModRuntimeOnly)
 
     implementation(project(":common", configuration = "namedElements"))
     "developmentFabric"(project(":common", configuration = "namedElements"))
