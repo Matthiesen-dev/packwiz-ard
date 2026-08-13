@@ -7,6 +7,8 @@
 Load and update your server PackWiz modpack with ease. PackWiz-ard is a server-side mod that integrates with the PackWiz 
 ecosystem, allowing server owners to easily load and update their modpacks using PackWiz. With PackWiz-ard, you can keep 
 your server's modpack up to date with the latest versions of mods, and easily manage your modpack's dependencies.
+Optionally, you can also install this mod on the client to provide additional functionality, such as a client update screen,
+update notifications, and the ability to easily update the client-side mods to match the server's modpack.
 
 ## Features
 - **Easy configuration:** Simply provide the URL to your PackWiz `pack.toml` file in the `/config/packwiz_ard/common.toml` file.
