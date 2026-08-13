@@ -7,6 +7,8 @@
 Load and update your server PackWiz modpack with ease. PackWiz-ard is a server-side mod that integrates with the PackWiz 
 ecosystem, allowing server owners to easily load and update their modpacks using PackWiz. With PackWiz-ard, you can keep 
 your server's modpack up to date with the latest versions of mods, and easily manage your modpack's dependencies.
+Optionally, you can also install this mod on the client to provide additional functionality, such as a client update screen,
+update notifications, and the ability to easily update the client-side mods to match the server's modpack.
 
 ## Features
 - **Easy configuration:** Simply provide the URL to your PackWiz `pack.toml` file in the `/config/packwiz_ard/common.toml` file.
@@ -17,6 +19,9 @@ your server's modpack up to date with the latest versions of mods, and easily ma
 - **Flexible Modloader support:** PackWiz-ard supports both Fabric and NeoForge modpacks, so you can use it with a wide variety of modpacks.
 - **Lightweight:** PackWiz-ard is designed to be lightweight and efficient, so it won't add any unnecessary overhead to your server.
 - **WebHook support:** PackWiz-ard supports sending Discord webhooks, allowing you to notify your discord server when updates are in progress or completed. Or changes to the mod's configuration are made.
+- **Client update screen:** A title-screen button opens a client update screen that validates the configured `pack.toml` link, shows whether an update is available, and lets you run the client update manually.
+- **Refresh control:** The client update screen can refresh automatically at a lightweight interval, or you can switch it to manual-only refresh mode.
+- **Restart reminder:** After a client update completes, the screen will tell you to restart the game before the new files take effect.
 
 ## Requirements
 
@@ -36,6 +41,14 @@ the rest. Just run the `/packwizard update` command to have PackWiz-ard download
 and keep them up to date with the latest versions.
 
 > To learn more about PackWiz checkout their [Documentation](https://packwiz.infra.link/), or their [Github](https://github.com/packwiz/packwiz).
+
+## Client Updates
+
+When the game reaches the title screen, PackWiz-ard adds a button that opens a dedicated client update screen.
+That screen shows the current `pack.toml` validation result, whether a client update is available, and whether the client needs to be restarted.
+
+By default, the screen performs lightweight refresh checks while it is open. If you prefer, you can switch refresh mode to manual-only from the screen itself.
+Client updates are always started manually; PackWiz-ard does not try to auto-install updates on your behalf.
 
 ## Commands
 

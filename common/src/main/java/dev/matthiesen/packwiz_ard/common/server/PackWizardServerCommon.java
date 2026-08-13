@@ -33,7 +33,7 @@ public final class PackWizardServerCommon {
 
         PlatformEvents.SERVER_END_TICK.subscribe(event -> {
             if (isServerRunning) {
-                PackWizardCommand.pollCommandStatus();
+                PACK_MANAGER.pollTasks();
                 tickAutoUpdate(event.server());
             }
         });

@@ -13,6 +13,9 @@ ${mod_description}
 '''
 logoFile = "icon.png"
 
+[[mixins]]
+config = "packwiz_ard.mixins.json"
+
 [[dependencies.${mod_id}]]
 modId = "minecraft"
 mandatory = true

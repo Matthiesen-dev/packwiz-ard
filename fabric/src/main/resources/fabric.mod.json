@@ -16,6 +16,9 @@
       }
     }
   },
+  "mixins": [
+    "packwiz_ard.mixins.json"
+  ],
   "environment": "*",
   "entrypoints": {
     "main": [

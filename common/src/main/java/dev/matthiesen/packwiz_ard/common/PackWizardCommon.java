@@ -26,7 +26,7 @@ public final class PackWizardCommon extends AbstractCommonMod {
     public void initialize() {
         super.initialize();
 
-        registerModConfig(MOD_ID, ModConfigType.COMMON, PWConfig.COMMON_SPEC, "packwiz_ard/common.toml");
+        registerModConfig(MOD_ID, ModConfigType.STARTUP, PWConfig.COMMON_SPEC, "packwiz_ard/common.toml");
         registerModConfig(MOD_ID, ModConfigType.SERVER, PWConfig.SERVER_SPEC, "packwiz_ard/server.toml");
         registerModConfig(MOD_ID, ModConfigType.CLIENT, PWConfig.CLIENT_SPEC, "packwiz_ard/client.toml");
 
