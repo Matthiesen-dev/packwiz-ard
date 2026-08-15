@@ -11,16 +11,16 @@ import net.minecraft.world.item.Items;
 import java.util.function.Supplier;
 
 public final class PackWizardStatusButton extends Button {
-    private final Supplier<PackTomlStatus> statusSupplier;
+    private final Supplier<PackStatus> statusSupplier;
 
-    public PackWizardStatusButton(int x, int y, int width, int height, OnPress onPress, Supplier<PackTomlStatus> statusSupplier) {
+    public PackWizardStatusButton(int x, int y, int width, int height, OnPress onPress, Supplier<PackStatus> statusSupplier) {
         super(x, y, width, height, Component.empty(), onPress, DEFAULT_NARRATION);
         this.statusSupplier = statusSupplier;
     }
 
     @Override
     protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        PackTomlStatus status = statusSupplier.get();
+        PackStatus status = statusSupplier.get();
 
         setMessage(Component.empty());
         setTooltip(Tooltip.create(Component.literal(status.message())));
@@ -34,7 +34,7 @@ public final class PackWizardStatusButton extends Button {
         graphics.renderItem(iconStack, iconX, iconY);
     }
 
-    private static Item getStatusIcon(PackTomlStatus status) {
+    private static Item getStatusIcon(PackStatus status) {
         return switch (status.state()) {
             case UNCONFIGURED -> Items.GRAY_WOOL;
             case CHECKING -> Items.COMPASS;

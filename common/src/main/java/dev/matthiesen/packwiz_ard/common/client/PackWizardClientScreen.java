@@ -91,7 +91,7 @@ public final class PackWizardClientScreen extends Screen {
         int y = 16;
         int infoWidth = Math.min(360, this.width - 40);
 
-        PackTomlStatus status = PackWizardClientCommon.INSTANCE.getStatus();
+        PackStatus status = PackWizardClientCommon.INSTANCE.getStatus();
         graphics.drawCenteredString(this.font, this.title, centerX, y, 0xFFFFFF);
         y += 14;
 
@@ -162,7 +162,7 @@ public final class PackWizardClientScreen extends Screen {
 
     private int getInfoPanelBottom() {
         int infoWidth = Math.min(360, this.width - 40);
-        PackTomlStatus status = PackWizardClientCommon.INSTANCE.getStatus();
+        PackStatus status = PackWizardClientCommon.INSTANCE.getStatus();
 
         int lineCount = 0;
         lineCount += this.font.split(Component.translatable(
@@ -203,7 +203,7 @@ public final class PackWizardClientScreen extends Screen {
     }
 
     private void refreshControls() {
-        PackTomlStatus status = PackWizardClientCommon.INSTANCE.getStatus();
+        PackStatus status = PackWizardClientCommon.INSTANCE.getStatus();
         boolean autoRefreshEnabled = PWConfig.CLIENT_CONFIG.autoRefreshEnabled.get();
         int intervalSeconds = PWConfig.CLIENT_CONFIG.autoRefreshIntervalSeconds.get();
 
@@ -230,7 +230,7 @@ public final class PackWizardClientScreen extends Screen {
         }
     }
 
-    private static int statusColor(PackTomlStatus status) {
+    private static int statusColor(PackStatus status) {
         return switch (status.state()) {
             case UNCONFIGURED -> 0xAAAAAA;
             case CHECKING, UPDATING -> 0xE0B64A;

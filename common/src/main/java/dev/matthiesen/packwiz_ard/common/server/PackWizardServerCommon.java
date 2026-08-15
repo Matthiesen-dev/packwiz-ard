@@ -6,14 +6,14 @@ import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.server.commands.PackWizardCommand;
 import dev.matthiesen.packwiz_ard.common.server.webhook.DiscordWebhookService;
 import dev.matthiesen.packwiz_ard.common.server.webhook.NoOpWebhookService;
-import dev.matthiesen.packwiz_ard.common.shared.PackManager;
+import dev.matthiesen.packwiz_ard.common.shared.interfaces.IPackManager;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.IWebhookService;
 import net.minecraft.server.MinecraftServer;
 
 public final class PackWizardServerCommon {
     private static long autoUpdateTicks = 0L;
     private static boolean warnedInvalidAutoUpdateInterval = false;
-    private static final PackManager PACK_MANAGER = PackWizardCommon.PACK_MANAGER;
+    private static final IPackManager PACK_MANAGER = PackWizardCommon.PACK_MANAGER;
     private static IWebhookService discordWebhookService;
 
     private static boolean isServerRunning = false;
@@ -22,10 +22,10 @@ public final class PackWizardServerCommon {
         PackWizardCommon.INSTANCE.getCommandsRegistryManager().registerCommand(PackWizardCommand.CMD);
 
         PlatformEvents.SERVER_STARTED.subscribe(event -> {
-            var packToml = PWConfig.COMMON_CONFIG.pack_toml.get();
+            var packToml = PACK_MANAGER.getConfiguredLink();
 
             if (packToml == null || packToml.isEmpty()) {
-                PackWizardCommon.INSTANCE.createWarnLog("Failed to load a pack.toml file from config");
+                PackWizardCommon.INSTANCE.createWarnLog("Failed to load a modpack source from the configured updater");
             }
 
             isServerRunning = true;
@@ -64,8 +64,8 @@ public final class PackWizardServerCommon {
             return;
         }
 
-        var packToml = PWConfig.COMMON_CONFIG.pack_toml.get();
-        if (packToml == null || packToml.isBlank() || !packToml.contains("pack.toml")) {
+        var packToml = PACK_MANAGER.getConfiguredLink();
+        if (packToml == null || packToml.isBlank()) {
             resetAutoUpdateSchedule();
             return;
         }
@@ -89,11 +89,11 @@ public final class PackWizardServerCommon {
             return;
         }
 
-        if (PACK_MANAGER.isAsyncTaskRunning(PackManager.UPDATE_PACKWIZ_TASK_NAME)) {
+        if (PACK_MANAGER.isAsyncTaskRunning(PACK_MANAGER.getUpdateTaskName())) {
             return;
         }
 
-        PackWizardCommon.INSTANCE.createInfoLog("Automatic Packwiz update triggered after " + intervalMinutes + " minute(s).");
+        PackWizardCommon.INSTANCE.createInfoLog("Automatic modpack update triggered after " + intervalMinutes + " minute(s).");
 
         boolean started = PACK_MANAGER.update(packToml, PACK_MANAGER.hasBootstrap(), server);
         if (started) {
