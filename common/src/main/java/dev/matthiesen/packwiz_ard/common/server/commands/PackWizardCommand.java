@@ -10,7 +10,6 @@ import dev.matthiesen.matthiesen_core.common.api.command.CoreCommand;
 import dev.matthiesen.matthiesen_core.common.utility.chat.ChatTableBuilder;
 import dev.matthiesen.matthiesen_core.common.utility.commands.CommandBuilder;
 import dev.matthiesen.packwiz_ard.common.server.PackWizardServerCommon;
-import dev.matthiesen.packwiz_ard.common.shared.PackManager;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
 import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.CommandExceptions;
@@ -24,12 +23,13 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
+import java.io.IOException;
 import java.util.List;
 
 public final class PackWizardCommand implements CoreCommand {
-    private static final Component UPDATE_START = Component.literal("Updating modpack. This may take a while...").withStyle(ChatFormatting.GRAY);
-    private static final Component UPDATE_START_NO_BOOTSTRAP = Component.literal("Downloading the Packwiz Bootstrap and updating the modpack. This may take a while...").withStyle(ChatFormatting.GRAY);
-    private static final Component UPDATED_TOML_LINK = Component.literal("Successfully linked a Packwiz modpack. Use /packwizard update for the changes to take effect.").withStyle(ChatFormatting.GREEN);
+    private static final Component UPDATE_START = Component.literal("Updating the selected modpack source. This may take a while...").withStyle(ChatFormatting.GRAY);
+    private static final Component UPDATE_START_NO_BOOTSTRAP = Component.literal("Updating the modpack source. This may take a while...").withStyle(ChatFormatting.GRAY);
+    private static final Component UPDATED_TOML_LINK = Component.literal("Successfully linked the modpack source. Use /packwizard update for the changes to take effect.").withStyle(ChatFormatting.GREEN);
     private static final Component SET_MIN_PERMISSION_LEVEL = Component.literal("Set minimum permission level required to use the /packwizard command").withStyle(ChatFormatting.GREEN);
     private static final Component SET_AUTO_UPDATE_ENABLED = Component.literal("Enabled automatic scheduled updates.").withStyle(ChatFormatting.GREEN);
     private static final Component SET_AUTO_UPDATE_DISABLED = Component.literal("Disabled automatic scheduled updates.").withStyle(ChatFormatting.GREEN);
@@ -102,12 +102,15 @@ public final class PackWizardCommand implements CoreCommand {
 
     private int setTomlLink(CommandContext<CommandSourceStack> context) {
         try {
-            var url = PackWizardCommon.PACK_MANAGER.testPackTomlLink(StringArgumentType.getString(context, "url"));
-            var oldPackTomlLink = PWConfig.COMMON_CONFIG.pack_toml.get();
-            var newPackTomlLink = url.toExternalForm();
+            var inputLink = StringArgumentType.getString(context, "url");
+            PackWizardCommon.PACK_MANAGER.testPackLink(inputLink);
+            var oldPackTomlLink = PackWizardCommon.PACK_MANAGER.getConfiguredLink();
+            PackWizardCommon.PACK_MANAGER.setConfiguredLink(inputLink);
+            var newPackTomlLink = PackWizardCommon.PACK_MANAGER.getConfiguredLink();
 
-            PWConfig.COMMON_CONFIG.pack_toml.set(newPackTomlLink);
-            PWConfig.COMMON_CONFIG.pack_toml.save();
+            if (newPackTomlLink == null) {
+                newPackTomlLink = "";
+            }
 
             sendConfigWebhook(
                     PWConfig.getPackTomlLinkUpdatedEmbed(),
@@ -120,7 +123,7 @@ public final class PackWizardCommand implements CoreCommand {
 
             Helpers.getCommandOutput(context).sendSystemMessage(UPDATED_TOML_LINK);
             return 1;
-        } catch (PackTomlUrlException e) {
+        } catch (PackTomlUrlException | IOException e) {
             var error = CommandExceptions.FILE_UPDATE_FAILED.create();
             PackWizardCommon.INSTANCE.createErrorLog(e.getMessage(), e);
             Helpers.getCommandOutput(context).sendSystemMessage(Component.literal(error.getMessage()).withStyle(ChatFormatting.RED));
@@ -133,10 +136,10 @@ public final class PackWizardCommand implements CoreCommand {
             if (!PackWizardCommon.INSTANCE.getGameDir().exists())
                 throw CommandExceptions.DIRECTORY_SECURITY_ERROR.create();
 
-            String packTomlLink = PWConfig.COMMON_CONFIG.pack_toml.get();
-            if (!packTomlLink.contains("pack.toml"))
+            String packTomlLink = PackWizardCommon.PACK_MANAGER.getConfiguredLink();
+            if (packTomlLink == null || packTomlLink.isBlank())
                 throw CommandExceptions.NO_PACK_TOML.create();
-            if (PackWizardCommon.PACK_MANAGER.isAsyncTaskRunning(PackManager.UPDATE_PACKWIZ_TASK_NAME))
+            if (PackWizardCommon.PACK_MANAGER.isAsyncTaskRunning(PackWizardCommon.PACK_MANAGER.getUpdateTaskName()))
                 throw CommandExceptions.UPDATE_IN_PROGRESS_ERROR.create();
 
             CommandSource output = Helpers.getCommandOutput(context);
@@ -243,7 +246,7 @@ public final class PackWizardCommand implements CoreCommand {
 
     public int autoUpdateStatus(CommandContext<CommandSourceStack> context) {
         var output = Helpers.getCommandOutput(context);
-        boolean updateRunning = PackWizardCommon.PACK_MANAGER.isAsyncTaskRunning(PackManager.UPDATE_PACKWIZ_TASK_NAME);
+        boolean updateRunning = PackWizardCommon.PACK_MANAGER.isAsyncTaskRunning(PackWizardCommon.PACK_MANAGER.getUpdateTaskName());
 
         var chatBuilder = new ChatTableBuilder("Auto Update Status", PackWizFormatting);
 

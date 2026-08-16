@@ -114,11 +114,11 @@ public final class ServerConfig {
         webhooks_pack_updateFailed_color = builder.comment("Embed color for the pack update failed webhook message")
                 .defineEnum("packUpdateFailed_color", DiscordColor.RED);
 
-        webhooks_pack_tomlLinkUpdated_title = builder.comment("Title for the pack.toml link updated webhook message")
-                .define("packTomlLinkUpdated_title", "Pack.toml Link Updated!");
-        webhooks_pack_tomlLinkUpdated_description = builder.comment("Description for the pack.toml link updated webhook message")
-                .define("packTomlLinkUpdated_description", "The pack.toml link has been updated! The new link is: %newLink%");
-        webhooks_pack_tomlLinkUpdated_color = builder.comment("Embed color for the pack.toml link updated webhook message")
+        webhooks_pack_tomlLinkUpdated_title = builder.comment("Title for the pack source updated webhook message")
+                .define("packTomlLinkUpdated_title", "Pack Source Updated!");
+        webhooks_pack_tomlLinkUpdated_description = builder.comment("Description for the pack source updated webhook message")
+                .define("packTomlLinkUpdated_description", "The pack source has been updated! The new link is: %newLink%");
+        webhooks_pack_tomlLinkUpdated_color = builder.comment("Embed color for the pack source updated webhook message")
                 .defineEnum("packTomlLinkUpdated_color", DiscordColor.GOLD);
 
         webhooks_minimumPermissionLevelUpdated_title = builder.comment("Title for the minimum permission level updated webhook message")

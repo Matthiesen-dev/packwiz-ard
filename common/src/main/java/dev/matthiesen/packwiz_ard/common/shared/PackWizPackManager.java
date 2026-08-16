@@ -3,15 +3,15 @@ package dev.matthiesen.packwiz_ard.common.shared;
 import com.moandjiezana.toml.Toml;
 import dev.matthiesen.matthiesen_core.common.api.platform.loader.Environment;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
-import dev.matthiesen.packwiz_ard.common.client.PackTomlStatus;
+import dev.matthiesen.packwiz_ard.common.client.PackStatus;
 import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.FailedHashMatchException;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackTomlUrlException;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.ProcessExitCodeException;
 import dev.matthiesen.packwiz_ard.common.server.PackWizardServerCommon;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.AsyncCommandTask;
+import dev.matthiesen.packwiz_ard.common.shared.interfaces.IPackManager;
 import dev.matthiesen.packwiz_ard.common.shared.util.HashedFileDownloader;
-import net.minecraft.commands.CommandSource;
 import org.jetbrains.annotations.NotNull;
 import net.minecraft.network.chat.Component;
 
@@ -30,7 +30,7 @@ import java.util.concurrent.CompletionException;
 import java.util.function.Predicate;
 import java.util.function.Consumer;
 
-public final class PackManager {
+public final class PackWizPackManager implements IPackManager {
     public static final String BOOTSTRAP_URL = "https://github.com/packwiz/packwiz-installer-bootstrap/releases/download/v0.0.3/packwiz-installer-bootstrap.jar";
     public static final String BOOTSTRAP_HASH = "a8fbb24dc604278e97f4688e82d3d91a318b98efc08d5dbfcbcbcab6443d116c";
     public static final String BOOTSTRAP_TASK_NAME = "downloadBootstrap";
@@ -45,7 +45,23 @@ public final class PackManager {
     public static final LinkedList<AsyncCommandTask> TASKS = new LinkedList<>();
     private static final Predicate<String> HAS_TASK = name -> TASKS.stream().anyMatch((task) -> task.hasName(name));
 
-    public PackManager() {}
+    public PackWizPackManager() {}
+
+    @Override
+    public String getUpdateTaskName() {
+        return UPDATE_PACKWIZ_TASK_NAME;
+    }
+
+    @Override
+    public String getConfiguredLink() {
+        return PWConfig.COMMON_CONFIG.pack_toml.get();
+    }
+
+    @Override
+    public void setConfiguredLink(String link) {
+        PWConfig.COMMON_CONFIG.pack_toml.set(link == null ? "" : link);
+        PWConfig.COMMON_CONFIG.pack_toml.save();
+    }
 
     private void sendWebhook(PWConfig.DiscordEmbed embed) {
         if (embed != null && PackWizardServerCommon.getWebhookService() != null) {
@@ -53,13 +69,14 @@ public final class PackManager {
         }
     }
 
-    public PackTomlStatus getPackTomlStatus(String packTomlLink) {
-        String normalizedLink = packTomlLink == null ? "" : packTomlLink.trim();
+    @Override
+    public PackStatus getPackStatus(String packLink) {
+        String normalizedLink = packLink == null ? "" : packLink.trim();
         long checkedAt = System.currentTimeMillis();
 
         if (normalizedLink.isBlank()) {
-            return new PackTomlStatus(
-                    PackTomlStatus.State.UNCONFIGURED,
+            return new PackStatus(
+                    PackStatus.State.UNCONFIGURED,
                     null,
                     "Set a pack.toml link to check for client updates.",
                     false,
@@ -70,13 +87,13 @@ public final class PackManager {
         }
 
         try {
-            URL packTomlUrl = testPackTomlLink(normalizedLink);
-            String currentHash = getLatestPackTomlHash(normalizedLink);
+            URL packTomlUrl = testPackLink(normalizedLink);
+            String currentHash = getLatestPackHash(normalizedLink);
             String lastSeenHash = PWConfig.COMMON_CONFIG.lastSeenPackTomlHash.get();
             boolean updateAvailable = !currentHash.equals(lastSeenHash);
 
-            return new PackTomlStatus(
-                    updateAvailable ? PackTomlStatus.State.UPDATE_AVAILABLE : PackTomlStatus.State.UP_TO_DATE,
+            return new PackStatus(
+                    updateAvailable ? PackStatus.State.UPDATE_AVAILABLE : PackStatus.State.UP_TO_DATE,
                     packTomlUrl.toExternalForm(),
                     updateAvailable ? "A client update is available." : "The client pack.toml is valid and up to date.",
                     true,
@@ -86,13 +103,13 @@ public final class PackManager {
             );
         } catch (PackTomlUrlException e) {
             String message = e.getMessage() == null ? "The pack.toml link could not be validated." : e.getMessage();
-            PackTomlStatus.State state = message.contains("valid URL")
-                    ? PackTomlStatus.State.INVALID_URL
+            PackStatus.State state = message.contains("valid URL")
+                    ? PackStatus.State.INVALID_URL
                     : message.contains("valid TOML") || message.contains("invalid data")
-                    ? PackTomlStatus.State.INVALID_TOML
-                    : PackTomlStatus.State.ERROR;
+                    ? PackStatus.State.INVALID_TOML
+                    : PackStatus.State.ERROR;
 
-            return new PackTomlStatus(
+            return new PackStatus(
                     state,
                     normalizedLink,
                     message,
@@ -102,8 +119,8 @@ public final class PackManager {
                     checkedAt
             );
         } catch (IOException e) {
-            return new PackTomlStatus(
-                    PackTomlStatus.State.UNREACHABLE,
+            return new PackStatus(
+                    PackStatus.State.UNREACHABLE,
                     normalizedLink,
                     "The pack.toml link could not be reached or read.",
                     false,
@@ -112,8 +129,8 @@ public final class PackManager {
                     checkedAt
             );
         } catch (IllegalStateException e) {
-            return new PackTomlStatus(
-                    PackTomlStatus.State.INVALID_TOML,
+            return new PackStatus(
+                    PackStatus.State.INVALID_TOML,
                     normalizedLink,
                     "The pack.toml file contains invalid data.",
                     false,
@@ -124,15 +141,17 @@ public final class PackManager {
         }
     }
 
-    public String getLatestPackTomlHash(String packTomlLink) throws PackTomlUrlException, IOException {
-        URL packTomlUrl = testPackTomlLink(packTomlLink);
+    @Override
+    public String getLatestPackHash(String packLink) throws PackTomlUrlException, IOException {
+        URL packTomlUrl = testPackLink(packLink);
         var connection = packTomlUrl.openConnection();
         var toml = new Toml().read(connection.getInputStream());
         return toml.getString("index.hash");
     }
 
+    @Override
     public void pollTasks() {
-        var tasksIterator = PackManager.TASKS.listIterator();
+        var tasksIterator = PackWizPackManager.TASKS.listIterator();
 
         while (tasksIterator.hasNext()) {
             var task = tasksIterator.next();
@@ -145,9 +164,9 @@ public final class PackManager {
                 try {
                     task.getFuture().join();
 
-                    if (task.hasName(PackManager.UPDATE_PACKWIZ_TASK_NAME))
+                    if (task.hasName(PackWizPackManager.UPDATE_PACKWIZ_TASK_NAME))
                         message = UPDATE_FINISHED;
-                    else if (task.hasName(PackManager.BOOTSTRAP_TASK_NAME))
+                    else if (task.hasName(PackWizPackManager.BOOTSTRAP_TASK_NAME))
                         message = BOOTSTRAP_DOWNLOAD_FINISHED;
                 } catch (CompletionException e) {
                     exception = e;
@@ -162,7 +181,7 @@ public final class PackManager {
                     else if (cause instanceof IOException)
                         message = Component.literal("Read/write process failed. Check the console for details.");
 
-                    if (task.hasName(PackManager.UPDATE_PACKWIZ_TASK_NAME)) {
+                    if (task.hasName(PackWizPackManager.UPDATE_PACKWIZ_TASK_NAME)) {
                         if (cause instanceof PackTomlUrlException ptfe)
                             message = Component.literal(ptfe.getMessage());
                         else if (cause instanceof ProcessExitCodeException pece)
@@ -180,14 +199,7 @@ public final class PackManager {
         }
     }
 
-    public boolean update(String packTomlLink, boolean hasBootstrap, CommandSource output) {
-        return update(packTomlLink, hasBootstrap, output::sendSystemMessage);
-    }
-
-    public boolean update(String packTomlLink, boolean hasBootstrap, Consumer<Component> messageSink) {
-        return update(packTomlLink, hasBootstrap, messageSink, () -> {}, throwable -> {});
-    }
-
+    @Override
     public boolean update(String packTomlLink, boolean hasBootstrap, Consumer<Component> messageSink, Runnable onSuccess, Consumer<Throwable> onFailure) {
         List<String> command = new ArrayList<>(PACKWIZ_COMMAND_PREFIX);
         boolean isDedicatedServer = PackWizardCommon.INSTANCE.getCommonUtils().getEnvironment() == Environment.SERVER;
@@ -228,8 +240,8 @@ public final class PackManager {
                         }
                     }
 
-                    testPackTomlLink(packTomlLink);
-                    String currentHash = getLatestPackTomlHash(packTomlLink);
+                    testPackLink(packTomlLink);
+                    String currentHash = getLatestPackHash(packTomlLink);
 
                     var process = new ProcessBuilder(command).inheritIO().start();
                     try (var bufferedReader = process.inputReader()) {
@@ -254,9 +266,10 @@ public final class PackManager {
         return false;
     }
 
-    public @NotNull URL testPackTomlLink(@NotNull final String packTomlLink) throws PackTomlUrlException {
+    @Override
+    public @NotNull URL testPackLink(@NotNull final String packLink) throws PackTomlUrlException {
         try {
-            var url = URI.create(packTomlLink).toURL();
+            var url = URI.create(packLink).toURL();
             var connection = url.openConnection();
             var toml = new Toml().read(connection.getInputStream());
 
@@ -274,10 +287,12 @@ public final class PackManager {
         }
     }
 
+    @Override
     public boolean hasBootstrap() {
         return new File("packwiz-installer-bootstrap.jar").exists();
     }
 
+    @Override
     public boolean isAsyncTaskRunning(String name) {
         return HAS_TASK.test(name);
     }

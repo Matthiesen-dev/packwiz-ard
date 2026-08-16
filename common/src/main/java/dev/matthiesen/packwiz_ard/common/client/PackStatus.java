@@ -4,9 +4,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("unused")
-public record PackTomlStatus(
+public record PackStatus(
         @NotNull State state,
-        @Nullable String packTomlLink,
+        @Nullable String packLink,
         @NotNull String message,
         boolean valid,
         boolean updateAvailable,

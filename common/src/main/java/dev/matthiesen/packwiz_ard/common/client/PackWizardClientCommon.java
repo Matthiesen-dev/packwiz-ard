@@ -13,10 +13,10 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class PackWizardClientCommon extends AbstractCommonClientMod {
     public static final PackWizardClientCommon INSTANCE = new PackWizardClientCommon();
 
-    private final AtomicReference<PackTomlStatus> currentStatus = new AtomicReference<>(new PackTomlStatus(
-            PackTomlStatus.State.UNCONFIGURED,
+    private final AtomicReference<PackStatus> currentStatus = new AtomicReference<>(new PackStatus(
+            PackStatus.State.UNCONFIGURED,
             null,
-            "Set a pack.toml link to check for client updates.",
+            "Set a modpack source to check for client updates.",
             false,
             false,
             false,
@@ -59,7 +59,7 @@ public final class PackWizardClientCommon extends AbstractCommonClientMod {
         }
     }
 
-    public PackTomlStatus getStatus() {
+    public PackStatus getStatus() {
         return currentStatus.get();
     }
 
@@ -82,10 +82,10 @@ public final class PackWizardClientCommon extends AbstractCommonClientMod {
 
         String packTomlLink = getPackTomlLink();
         if (packTomlLink == null || packTomlLink.isBlank()) {
-            currentStatus.set(new PackTomlStatus(
-                    PackTomlStatus.State.UNCONFIGURED,
+            currentStatus.set(new PackStatus(
+                    PackStatus.State.UNCONFIGURED,
                     null,
-                    "Set a pack.toml link to check for client updates.",
+                    "Set a modpack source to check for client updates.",
                     false,
                     false,
                     false,
@@ -98,10 +98,10 @@ public final class PackWizardClientCommon extends AbstractCommonClientMod {
             return;
         }
 
-        currentStatus.set(new PackTomlStatus(
-                PackTomlStatus.State.CHECKING,
+        currentStatus.set(new PackStatus(
+                PackStatus.State.CHECKING,
                 packTomlLink,
-                "Checking pack.toml status...",
+                "Checking modpack source status...",
                 false,
                 false,
                 false,
@@ -110,14 +110,14 @@ public final class PackWizardClientCommon extends AbstractCommonClientMod {
 
         CompletableFuture.runAsync(() -> {
             try {
-                PackTomlStatus status = PackWizardCommon.PACK_MANAGER.getPackTomlStatus(packTomlLink);
+                PackStatus status = PackWizardCommon.PACK_MANAGER.getPackStatus(packTomlLink);
                 currentStatus.set(status);
             } catch (Exception e) {
-                PackWizardCommon.INSTANCE.createErrorLog("Failed to validate the client pack.toml link", e);
-                currentStatus.set(new PackTomlStatus(
-                        PackTomlStatus.State.ERROR,
+                PackWizardCommon.INSTANCE.createErrorLog("Failed to validate the client modpack source", e);
+                currentStatus.set(new PackStatus(
+                        PackStatus.State.ERROR,
                         packTomlLink,
-                        e.getMessage() == null ? "The pack.toml link could not be validated." : e.getMessage(),
+                        e.getMessage() == null ? "The modpack source could not be validated." : e.getMessage(),
                         false,
                         false,
                         false,
@@ -134,17 +134,17 @@ public final class PackWizardClientCommon extends AbstractCommonClientMod {
             return;
         }
 
-        PackTomlStatus status = currentStatus.get();
+        PackStatus status = currentStatus.get();
         if (!status.canUpdate()) {
             return;
         }
 
         String packTomlLink = getPackTomlLink();
         if (packTomlLink == null || packTomlLink.isBlank()) {
-            currentStatus.set(new PackTomlStatus(
-                    PackTomlStatus.State.UNCONFIGURED,
+            currentStatus.set(new PackStatus(
+                    PackStatus.State.UNCONFIGURED,
                     null,
-                    "Set a pack.toml link to check for client updates.",
+                    "Set a modpack source to check for client updates.",
                     false,
                     false,
                     false,
@@ -157,10 +157,10 @@ public final class PackWizardClientCommon extends AbstractCommonClientMod {
             return;
         }
 
-        currentStatus.set(new PackTomlStatus(
-                PackTomlStatus.State.UPDATING,
+        currentStatus.set(new PackStatus(
+                PackStatus.State.UPDATING,
                 packTomlLink,
-                "Updating the client pack... Restart will be required after the update completes.",
+                "Updating the client pack source... Restart will be required after the update completes.",
                 true,
                 true,
                 false,
@@ -177,10 +177,10 @@ public final class PackWizardClientCommon extends AbstractCommonClientMod {
 
         if (!started) {
             updateInProgress.set(false);
-            currentStatus.set(new PackTomlStatus(
+            currentStatus.set(new PackStatus(
                     status.state(),
                     packTomlLink,
-                    "A client update is already in progress.",
+                        "A client update is already in progress.",
                     status.valid(),
                     status.updateAvailable(),
                     status.restartRequired(),
@@ -191,15 +191,15 @@ public final class PackWizardClientCommon extends AbstractCommonClientMod {
 
 
     public String getPackTomlLink() {
-        return PWConfig.COMMON_CONFIG.pack_toml.get();
+        return PackWizardCommon.PACK_MANAGER.getConfiguredLink();
     }
 
     public void markUpdateFailed(String message) {
         updateInProgress.set(false);
         String packTomlLink = getPackTomlLink();
         PackWizardCommon.INSTANCE.createErrorLog("The client update failed: " + message);
-        currentStatus.set(new PackTomlStatus(
-                PackTomlStatus.State.ERROR,
+        currentStatus.set(new PackStatus(
+                PackStatus.State.ERROR,
                 packTomlLink == null || packTomlLink.isBlank() ? null : packTomlLink,
                 message == null ? "The client update failed." : message,
                 false,
@@ -212,8 +212,8 @@ public final class PackWizardClientCommon extends AbstractCommonClientMod {
     public void markUpdateFinished() {
         updateInProgress.set(false);
         String packTomlLink = getPackTomlLink();
-        currentStatus.set(new PackTomlStatus(
-                PackTomlStatus.State.RESTART_REQUIRED,
+        currentStatus.set(new PackStatus(
+                PackStatus.State.RESTART_REQUIRED,
                 packTomlLink == null || packTomlLink.isBlank() ? null : packTomlLink,
                 "The client update completed successfully. Restart the game to load the new files.",
                 true,
