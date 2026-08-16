@@ -43,7 +43,7 @@ PackWiz-ard supports two updater backends:
 Use `/packwizard update` to sync the currently selected backend.
 
 > - To learn more about PackWiz checkout their [Documentation](https://packwiz.infra.link/), or their [Github](https://github.com/packwiz/packwiz).
-> - To learn more about Packweave checkout their [Documentation](https://packweave.com/), or their [Github](https://github.com/packweavers/packweave).
+> - To learn more about Packweave checkout their [Website](https://packweave.com/), or their [Github](https://github.com/packweavers/packweave).
 
 ## Client Updates
 
