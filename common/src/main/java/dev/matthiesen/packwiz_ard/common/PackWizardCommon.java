@@ -3,10 +3,10 @@ package dev.matthiesen.packwiz_ard.common;
 import dev.matthiesen.libs.faststats.Token;
 import dev.matthiesen.matthiesen_core.common.AbstractCommonMod;
 import dev.matthiesen.matthiesen_core.common.api.platform.loader.ModConfigType;
-import dev.matthiesen.packwiz_ard.common.shared.PackweavePackManager;
-import dev.matthiesen.packwiz_ard.common.shared.config.CommonConfig;
-import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
-import dev.matthiesen.packwiz_ard.common.shared.PackWizPackManager;
+import dev.matthiesen.packwiz_ard.common.shared.pack_managers.PackweavePackManager;
+import dev.matthiesen.packwiz_ard.common.config.CommonConfig;
+import dev.matthiesen.packwiz_ard.common.config.PWConfig;
+import dev.matthiesen.packwiz_ard.common.shared.pack_managers.PackWizPackManager;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.IPackManager;
 import org.jetbrains.annotations.NotNull;
 
@@ -26,13 +26,17 @@ public final class PackWizardCommon extends AbstractCommonMod {
         super(MOD_ID, MOD_NAME);
     }
 
+    public static String configPath(String path) {
+        return MOD_ID + "/" + path + ".toml";
+    }
+
     @Override
     public void initialize() {
         super.initialize();
 
-        registerModConfig(MOD_ID, ModConfigType.STARTUP, PWConfig.COMMON_SPEC, "packwiz_ard/common.toml");
-        registerModConfig(MOD_ID, ModConfigType.SERVER, PWConfig.SERVER_SPEC, "packwiz_ard/server.toml");
-        registerModConfig(MOD_ID, ModConfigType.CLIENT, PWConfig.CLIENT_SPEC, "packwiz_ard/client.toml");
+        registerModConfig(MOD_ID, ModConfigType.STARTUP, PWConfig.COMMON_SPEC, configPath("common"));
+        registerModConfig(MOD_ID, ModConfigType.SERVER, PWConfig.SERVER_SPEC, configPath("server"));
+        registerModConfig(MOD_ID, ModConfigType.CLIENT, PWConfig.CLIENT_SPEC, configPath("client"));
 
         CommonConfig.UPDATER updater = PWConfig.COMMON_CONFIG.updater.get();
         switch (updater) {

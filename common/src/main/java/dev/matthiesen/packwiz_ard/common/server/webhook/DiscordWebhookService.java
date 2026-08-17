@@ -6,7 +6,7 @@ import dev.matthiesen.matthiesen_core.common.api.exceptions.DiscordWebhookExcept
 import dev.matthiesen.matthiesen_core.common.core.discord.model.Embed;
 import dev.matthiesen.matthiesen_core.common.core.discord.model.EmbedBuilder;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
-import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
+import dev.matthiesen.packwiz_ard.common.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.IWebhookService;
 
 import java.time.Instant;

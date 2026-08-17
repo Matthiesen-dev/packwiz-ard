@@ -1,8 +1,9 @@
-package dev.matthiesen.packwiz_ard.common.client;
+package dev.matthiesen.packwiz_ard.common;
 
 import dev.matthiesen.matthiesen_core.common.AbstractCommonClientMod;
-import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
-import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
+import dev.matthiesen.packwiz_ard.common.client.PackWizardClientScreen;
+import dev.matthiesen.packwiz_ard.common.config.PWConfig;
+import dev.matthiesen.packwiz_ard.common.shared.interfaces.PackStatus;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
 

@@ -1,4 +1,4 @@
-package dev.matthiesen.packwiz_ard.common.shared.config;
+package dev.matthiesen.packwiz_ard.common.config;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 

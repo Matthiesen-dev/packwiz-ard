@@ -1,6 +1,6 @@
-package dev.matthiesen.packwiz_ard.common.mixin;
+package dev.matthiesen.packwiz_ard.common.mixins;
 
-import dev.matthiesen.packwiz_ard.common.client.PackWizardClientCommon;
+import dev.matthiesen.packwiz_ard.common.PackWizardClientCommon;
 import dev.matthiesen.packwiz_ard.common.client.PackWizardClientScreen;
 import dev.matthiesen.packwiz_ard.common.client.PackWizardStatusButton;
 import net.minecraft.client.Minecraft;

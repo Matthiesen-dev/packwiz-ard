@@ -1,28 +1,28 @@
-package dev.matthiesen.packwiz_ard.common.server;
+package dev.matthiesen.packwiz_ard.common;
 
 import dev.matthiesen.matthiesen_core.common.api.events.PlatformEvents;
-import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
-import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
+import dev.matthiesen.packwiz_ard.common.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.server.commands.PackWizardCommand;
 import dev.matthiesen.packwiz_ard.common.server.webhook.DiscordWebhookService;
 import dev.matthiesen.packwiz_ard.common.server.webhook.NoOpWebhookService;
-import dev.matthiesen.packwiz_ard.common.shared.interfaces.IPackManager;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.IWebhookService;
 import net.minecraft.server.MinecraftServer;
 
 public final class PackWizardServerCommon {
-    private static long autoUpdateTicks = 0L;
-    private static boolean warnedInvalidAutoUpdateInterval = false;
-    private static final IPackManager PACK_MANAGER = PackWizardCommon.PACK_MANAGER;
-    private static IWebhookService discordWebhookService;
+    public static final PackWizardServerCommon INSTANCE = new PackWizardServerCommon();
 
-    private static boolean isServerRunning = false;
+    private PackWizardServerCommon() {}
 
-    public static void initialize() {
+    private long autoUpdateTicks = 0L;
+    private boolean warnedInvalidAutoUpdateInterval = false;
+    private volatile IWebhookService discordWebhookService;
+    private boolean isServerRunning = false;
+
+    public void initialize() {
         PackWizardCommon.INSTANCE.getCommandsRegistryManager().registerCommand(PackWizardCommand.CMD);
 
         PlatformEvents.SERVER_STARTED.subscribe(event -> {
-            var packToml = PACK_MANAGER.getConfiguredLink();
+            var packToml = PackWizardCommon.PACK_MANAGER.getConfiguredLink();
 
             if (packToml == null || packToml.isEmpty()) {
                 PackWizardCommon.INSTANCE.createWarnLog("Failed to load a modpack source from the configured updater");
@@ -33,8 +33,8 @@ public final class PackWizardServerCommon {
 
         PlatformEvents.SERVER_END_TICK.subscribe(event -> {
             if (isServerRunning) {
-                PACK_MANAGER.pollTasks();
-                tickAutoUpdate(event.server());
+                PackWizardCommon.PACK_MANAGER.pollTasks();
+                INSTANCE.tickAutoUpdate(event.server());
             }
         });
 
@@ -45,26 +45,26 @@ public final class PackWizardServerCommon {
         }
     }
 
-    public static IWebhookService getWebhookService() {
+    public IWebhookService getWebhookService() {
         return discordWebhookService;
     }
 
-    public static void resetAutoUpdateSchedule() {
+    public void resetAutoUpdateSchedule() {
         autoUpdateTicks = 0L;
     }
 
-    public static long getAutoUpdateTicks() {
+    public long getAutoUpdateTicks() {
         return autoUpdateTicks;
     }
 
-    private static void tickAutoUpdate(MinecraftServer server) {
+    private void tickAutoUpdate(MinecraftServer server) {
         if (!PWConfig.SERVER_CONFIG.autoUpdate.getAsBoolean()) {
             resetAutoUpdateSchedule();
             warnedInvalidAutoUpdateInterval = false;
             return;
         }
 
-        var packToml = PACK_MANAGER.getConfiguredLink();
+        var packToml = PackWizardCommon.PACK_MANAGER.getConfiguredLink();
         if (packToml == null || packToml.isBlank()) {
             resetAutoUpdateSchedule();
             return;
@@ -89,13 +89,13 @@ public final class PackWizardServerCommon {
             return;
         }
 
-        if (PACK_MANAGER.isAsyncTaskRunning(PACK_MANAGER.getUpdateTaskName())) {
+        if (PackWizardCommon.PACK_MANAGER.isAsyncTaskRunning(PackWizardCommon.PACK_MANAGER.getUpdateTaskName())) {
             return;
         }
 
         PackWizardCommon.INSTANCE.createInfoLog("Automatic modpack update triggered after " + intervalMinutes + " minute(s).");
 
-        boolean started = PACK_MANAGER.update(packToml, PACK_MANAGER.hasBootstrap(), server);
+        boolean started = PackWizardCommon.PACK_MANAGER.update(packToml, PackWizardCommon.PACK_MANAGER.hasBootstrap(), server);
         if (started) {
             resetAutoUpdateSchedule();
         }

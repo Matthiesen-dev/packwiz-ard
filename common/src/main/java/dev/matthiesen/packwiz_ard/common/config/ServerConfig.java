@@ -1,4 +1,4 @@
-package dev.matthiesen.packwiz_ard.common.shared.config;
+package dev.matthiesen.packwiz_ard.common.config;
 
 import dev.matthiesen.matthiesen_core.common.core.discord.DiscordColor;
 import net.neoforged.neoforge.common.ModConfigSpec;
