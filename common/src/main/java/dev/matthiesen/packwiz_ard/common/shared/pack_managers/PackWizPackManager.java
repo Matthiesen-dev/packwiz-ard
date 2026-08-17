@@ -1,14 +1,14 @@
-package dev.matthiesen.packwiz_ard.common.shared;
+package dev.matthiesen.packwiz_ard.common.shared.pack_managers;
 
 import com.moandjiezana.toml.Toml;
 import dev.matthiesen.matthiesen_core.common.api.platform.loader.Environment;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
-import dev.matthiesen.packwiz_ard.common.client.PackStatus;
-import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
+import dev.matthiesen.packwiz_ard.common.shared.interfaces.PackStatus;
+import dev.matthiesen.packwiz_ard.common.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.FailedHashMatchException;
-import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackTomlUrlException;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackUrlException;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.ProcessExitCodeException;
-import dev.matthiesen.packwiz_ard.common.server.PackWizardServerCommon;
+import dev.matthiesen.packwiz_ard.common.PackWizardServerCommon;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.AsyncCommandTask;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.IPackManager;
 import dev.matthiesen.packwiz_ard.common.shared.util.HashedFileDownloader;
@@ -64,8 +64,8 @@ public final class PackWizPackManager implements IPackManager {
     }
 
     private void sendWebhook(PWConfig.DiscordEmbed embed) {
-        if (embed != null && PackWizardServerCommon.getWebhookService() != null) {
-            PackWizardServerCommon.getWebhookService().sendMessage(embed);
+        if (embed != null && PackWizardServerCommon.INSTANCE.getWebhookService() != null) {
+            PackWizardServerCommon.INSTANCE.getWebhookService().sendMessage(embed);
         }
     }
 
@@ -101,7 +101,7 @@ public final class PackWizPackManager implements IPackManager {
                     false,
                     checkedAt
             );
-        } catch (PackTomlUrlException e) {
+        } catch (PackUrlException e) {
             String message = e.getMessage() == null ? "The pack.toml link could not be validated." : e.getMessage();
             PackStatus.State state = message.contains("valid URL")
                     ? PackStatus.State.INVALID_URL
@@ -142,7 +142,7 @@ public final class PackWizPackManager implements IPackManager {
     }
 
     @Override
-    public String getLatestPackHash(String packLink) throws PackTomlUrlException, IOException {
+    public String getLatestPackHash(String packLink) throws PackUrlException, IOException {
         URL packTomlUrl = testPackLink(packLink);
         var connection = packTomlUrl.openConnection();
         var toml = new Toml().read(connection.getInputStream());
@@ -182,7 +182,7 @@ public final class PackWizPackManager implements IPackManager {
                         message = Component.literal("Read/write process failed. Check the console for details.");
 
                     if (task.hasName(PackWizPackManager.UPDATE_PACKWIZ_TASK_NAME)) {
-                        if (cause instanceof PackTomlUrlException ptfe)
+                        if (cause instanceof PackUrlException ptfe)
                             message = Component.literal(ptfe.getMessage());
                         else if (cause instanceof ProcessExitCodeException pece)
                             message = Component.literal(pece.getMessage());
@@ -267,7 +267,7 @@ public final class PackWizPackManager implements IPackManager {
     }
 
     @Override
-    public @NotNull URL testPackLink(@NotNull final String packLink) throws PackTomlUrlException {
+    public @NotNull URL testPackLink(@NotNull final String packLink) throws PackUrlException {
         try {
             var url = URI.create(packLink).toURL();
             var connection = url.openConnection();
@@ -275,15 +275,15 @@ public final class PackWizPackManager implements IPackManager {
 
             if (!PACK_TOML_REQUIRED_KEYS.stream().allMatch(toml::contains)) {
                 String requiredKeys = String.join(", ", PACK_TOML_REQUIRED_KEYS);
-                throw new PackTomlUrlException("The file does not contain all the required keys: " + requiredKeys);
+                throw new PackUrlException("The file does not contain all the required keys: " + requiredKeys);
             }
             return url;
         } catch (MalformedURLException | IllegalArgumentException e) {
-            throw new PackTomlUrlException("The link submitted is not a valid URL.");
+            throw new PackUrlException("The link submitted is not a valid URL.");
         } catch (IOException e) {
-            throw new PackTomlUrlException("Check this file exists and is a valid TOML file.");
+            throw new PackUrlException("Check this file exists and is a valid TOML file.");
         } catch (IllegalStateException e) {
-            throw new PackTomlUrlException("The file contains invalid data.");
+            throw new PackUrlException("The file contains invalid data.");
         }
     }
 

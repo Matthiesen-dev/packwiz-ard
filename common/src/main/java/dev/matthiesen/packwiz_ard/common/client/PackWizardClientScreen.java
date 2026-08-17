@@ -1,6 +1,8 @@
 package dev.matthiesen.packwiz_ard.common.client;
 
-import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
+import dev.matthiesen.packwiz_ard.common.PackWizardClientCommon;
+import dev.matthiesen.packwiz_ard.common.config.PWConfig;
+import dev.matthiesen.packwiz_ard.common.shared.interfaces.PackStatus;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;

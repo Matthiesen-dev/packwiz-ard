@@ -1,7 +1,6 @@
 package dev.matthiesen.packwiz_ard.common.shared.interfaces;
 
-import dev.matthiesen.packwiz_ard.common.client.PackStatus;
-import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackTomlUrlException;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackUrlException;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
@@ -12,12 +11,12 @@ import java.util.function.Consumer;
 
 public interface IPackManager {
     PackStatus getPackStatus(String packLink);
-    String getLatestPackHash(String packLink) throws PackTomlUrlException, IOException;
+    String getLatestPackHash(String packLink) throws PackUrlException, IOException;
     void pollTasks();
     String getUpdateTaskName();
     String getConfiguredLink();
     void setConfiguredLink(String link) throws IOException;
-    URL testPackLink(@NotNull final String packLink) throws PackTomlUrlException;
+    URL testPackLink(@NotNull final String packLink) throws PackUrlException;
     boolean hasBootstrap();
     boolean isAsyncTaskRunning(String name);
 

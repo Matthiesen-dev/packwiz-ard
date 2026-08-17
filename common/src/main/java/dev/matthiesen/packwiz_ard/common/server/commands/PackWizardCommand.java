@@ -9,11 +9,11 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.matthiesen.matthiesen_core.common.api.command.CoreCommand;
 import dev.matthiesen.matthiesen_core.common.utility.chat.ChatTableBuilder;
 import dev.matthiesen.matthiesen_core.common.utility.commands.CommandBuilder;
-import dev.matthiesen.packwiz_ard.common.server.PackWizardServerCommon;
+import dev.matthiesen.packwiz_ard.common.PackWizardServerCommon;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
-import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
+import dev.matthiesen.packwiz_ard.common.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.CommandExceptions;
-import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackTomlUrlException;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackUrlException;
 import dev.matthiesen.packwiz_ard.common.shared.util.Helpers;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandBuildContext;
@@ -56,7 +56,7 @@ public final class PackWizardCommand implements CoreCommand {
                 fields,
                 template.timestamp
         );
-        PackWizardServerCommon.getWebhookService().sendMessage(embed);
+        PackWizardServerCommon.INSTANCE.getWebhookService().sendMessage(embed);
     }
 
     private static final ChatTableBuilder.Formatting PackWizFormatting = new ChatTableBuilder.Formatting(
@@ -123,7 +123,7 @@ public final class PackWizardCommand implements CoreCommand {
 
             Helpers.getCommandOutput(context).sendSystemMessage(UPDATED_TOML_LINK);
             return 1;
-        } catch (PackTomlUrlException | IOException e) {
+        } catch (PackUrlException | IOException e) {
             var error = CommandExceptions.FILE_UPDATE_FAILED.create();
             PackWizardCommon.INSTANCE.createErrorLog(e.getMessage(), e);
             Helpers.getCommandOutput(context).sendSystemMessage(Component.literal(error.getMessage()).withStyle(ChatFormatting.RED));
@@ -151,7 +151,7 @@ public final class PackWizardCommand implements CoreCommand {
             }
 
             if (PackWizardCommon.PACK_MANAGER.update(packTomlLink, hasBootstrap, output)) {
-                PackWizardServerCommon.resetAutoUpdateSchedule();
+                PackWizardServerCommon.INSTANCE.resetAutoUpdateSchedule();
             }
             return 1;
         } catch (CommandSyntaxException e) {
@@ -195,7 +195,7 @@ public final class PackWizardCommand implements CoreCommand {
 
             PWConfig.SERVER_CONFIG.autoUpdate.set(enabled);
             PWConfig.SERVER_CONFIG.autoUpdate.save();
-            PackWizardServerCommon.resetAutoUpdateSchedule();
+            PackWizardServerCommon.INSTANCE.resetAutoUpdateSchedule();
 
             sendConfigWebhook(
                     PWConfig.getAutoUpdateUpdatedEmbed(),
@@ -223,7 +223,7 @@ public final class PackWizardCommand implements CoreCommand {
 
             PWConfig.SERVER_CONFIG.autoUpdateInterval.set(minutes);
             PWConfig.SERVER_CONFIG.autoUpdateInterval.save();
-            PackWizardServerCommon.resetAutoUpdateSchedule();
+            PackWizardServerCommon.INSTANCE.resetAutoUpdateSchedule();
 
             sendConfigWebhook(
                     PWConfig.getAutoUpdateIntervalUpdatedEmbed(),
@@ -266,7 +266,7 @@ public final class PackWizardCommand implements CoreCommand {
         }
 
         long intervalTicks = (long) PWConfig.SERVER_CONFIG.autoUpdateInterval.getAsInt() * 1_200L;
-        long elapsedTicks = Math.max(0L, PackWizardServerCommon.getAutoUpdateTicks());
+        long elapsedTicks = Math.max(0L, PackWizardServerCommon.INSTANCE.getAutoUpdateTicks());
         long remainingTicks = Math.max(0L, intervalTicks - elapsedTicks);
         long remainingSeconds = remainingTicks / 20L;
         long remainingMinutes = (remainingSeconds + 59L) / 60L;

@@ -1,7 +1,7 @@
 package dev.matthiesen.packwiz_ard.neoforge;
 
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
-import dev.matthiesen.packwiz_ard.common.client.PackWizardClientCommon;
+import dev.matthiesen.packwiz_ard.common.PackWizardClientCommon;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.Mod;
 

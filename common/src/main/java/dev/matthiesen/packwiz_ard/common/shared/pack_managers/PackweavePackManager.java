@@ -4,13 +4,13 @@
  * Source: https://github.com/packweavers/packweave/tree/main/installer
  * License: GNU General Public License v3.0
  */
-package dev.matthiesen.packwiz_ard.common.shared;
+package dev.matthiesen.packwiz_ard.common.shared.pack_managers;
 
 import dev.matthiesen.matthiesen_core.common.api.platform.loader.Environment;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
-import dev.matthiesen.packwiz_ard.common.client.PackStatus;
-import dev.matthiesen.packwiz_ard.common.shared.config.PWConfig;
-import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackTomlUrlException;
+import dev.matthiesen.packwiz_ard.common.shared.interfaces.PackStatus;
+import dev.matthiesen.packwiz_ard.common.config.PWConfig;
+import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackUrlException;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.AsyncCommandTask;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.IPackManager;
 import net.minecraft.network.chat.Component;
@@ -118,7 +118,7 @@ public final class PackweavePackManager implements IPackManager {
                     false,
                     checkedAt
             );
-        } catch (PackTomlUrlException e) {
+        } catch (PackUrlException e) {
             String message = e.getMessage() == null ? "The modpack URL could not be validated." : e.getMessage();
             PackStatus.State state = message.contains("valid URL")
                     ? PackStatus.State.INVALID_URL
@@ -159,7 +159,7 @@ public final class PackweavePackManager implements IPackManager {
     }
 
     @Override
-    public String getLatestPackHash(String packLink) throws PackTomlUrlException, IOException {
+    public String getLatestPackHash(String packLink) throws PackUrlException, IOException {
         String base = resolvePackLink(packLink);
         if (base == null || base.isBlank()) {
             throw new IOException("No modpack URL provided.");
@@ -240,11 +240,11 @@ public final class PackweavePackManager implements IPackManager {
     }
 
     @Override
-    public URL testPackLink(@NotNull String packLink) throws PackTomlUrlException {
+    public URL testPackLink(@NotNull String packLink) throws PackUrlException {
         try {
             String normalized = normalizeLink(resolvePackLink(packLink));
             if (normalized == null || normalized.isBlank()) {
-                throw new PackTomlUrlException("There is no modpack URL link to update from. Add this using /packwizard link [url].");
+                throw new PackUrlException("There is no modpack URL link to update from. Add this using /packwizard link [url].");
             }
 
             if (normalized.startsWith(RELEASE_PREFIX)) {
@@ -258,11 +258,11 @@ public final class PackweavePackManager implements IPackManager {
             validatePackSource(url.toExternalForm());
             return url;
         } catch (IllegalArgumentException | java.net.MalformedURLException e) {
-            throw new PackTomlUrlException("The link submitted is not a valid URL.");
+            throw new PackUrlException("The link submitted is not a valid URL.");
         } catch (IOException e) {
-            throw new PackTomlUrlException("Check this file exists and is a valid Packweave source.");
+            throw new PackUrlException("Check this file exists and is a valid Packweave source.");
         } catch (IllegalStateException e) {
-            throw new PackTomlUrlException("The file contains invalid data.");
+            throw new PackUrlException("The file contains invalid data.");
         }
     }
 

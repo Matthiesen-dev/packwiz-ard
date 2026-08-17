@@ -1,4 +1,4 @@
-package dev.matthiesen.packwiz_ard.common.client;
+package dev.matthiesen.packwiz_ard.common.shared.interfaces;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

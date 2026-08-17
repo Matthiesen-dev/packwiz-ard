@@ -53,7 +53,7 @@ That screen shows the current pack link validation result, whether a client upda
 By default, the screen performs lightweight refresh checks while it is open. If you prefer, you can switch refresh mode to manual-only from the screen itself.
 Client updates are always started manually; PackWiz-ard does not try to auto-install updates on your behalf.
 
-## Commands
+## Server Commands
 
 - `/packwizard update` - Runs an immediate update.
 - `/packwizard link <url>` - Sets your pack link URL.
