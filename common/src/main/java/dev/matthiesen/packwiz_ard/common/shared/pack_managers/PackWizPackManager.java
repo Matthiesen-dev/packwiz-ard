@@ -70,12 +70,6 @@ public final class PackWizPackManager implements IPackManager {
         PWConfig.COMMON_CONFIG.pack_toml.save();
     }
 
-    private void sendWebhook(PWConfig.DiscordEmbed embed) {
-        if (embed != null && PackWizardServerCommon.INSTANCE.getWebhookService() != null) {
-            PackWizardServerCommon.INSTANCE.getWebhookService().sendMessage(embed);
-        }
-    }
-
     @Override
     public PackStatus getPackStatus(String packLink) {
         String normalizedLink = packLink == null ? "" : packLink.trim();
@@ -218,10 +212,14 @@ public final class PackWizPackManager implements IPackManager {
         if (!HAS_TASK.test(UPDATE_PACKWIZ_TASK_NAME)) {
             TASKS.add(new AsyncCommandTask(CompletableFuture.runAsync(() -> {
                 try {
-                    sendWebhook(PWConfig.getPackUpdateTriggeredEmbed());
+                    if (PackWizardServerCommon.isServerRunning()) {
+                        sendWebhook(PWConfig.getPackUpdateTriggeredEmbed());
+                    }
 
                     if (!hasBootstrap) {
-                        sendWebhook(PWConfig.getBootstrapDownloadTriggeredEmbed());
+                        if (PackWizardServerCommon.isServerRunning()) {
+                            sendWebhook(PWConfig.getBootstrapDownloadTriggeredEmbed());
+                        }
 
                         var bootstrapPath = Path.of(PackWizardCommon.INSTANCE.getGameDir() + "/packwiz-installer-bootstrap.jar");
                         var downloader = new HashedFileDownloader(BOOTSTRAP_URL, BOOTSTRAP_HASH, bootstrapPath);
@@ -240,9 +238,13 @@ public final class PackWizPackManager implements IPackManager {
                                 }
                                 throw new FailedHashMatchException();
                             }
-                            sendWebhook(PWConfig.getBootstrapDownloadFinishedEmbed());
+                            if (PackWizardServerCommon.isServerRunning()) {
+                                sendWebhook(PWConfig.getBootstrapDownloadFinishedEmbed());
+                            }
                         } catch (Exception bootstrapException) {
-                            sendWebhook(PWConfig.getBootstrapDownloadFailedEmbed());
+                            if (PackWizardServerCommon.isServerRunning()) {
+                                sendWebhook(PWConfig.getBootstrapDownloadFailedEmbed());
+                            }
                             throw bootstrapException;
                         }
                     }
@@ -260,10 +262,14 @@ public final class PackWizPackManager implements IPackManager {
 
                     PWConfig.setPackTomlHash(currentHash);
                     onSuccess.run();
-                    sendWebhook(PWConfig.getPackUpdateFinishedEmbed());
+                    if (PackWizardServerCommon.isServerRunning()) {
+                        sendWebhook(PWConfig.getPackUpdateFinishedEmbed());
+                    }
                 } catch (Exception e) {
                     onFailure.accept(e);
-                    sendWebhook(PWConfig.getPackUpdateFailedEmbed());
+                    if (PackWizardServerCommon.isServerRunning()) {
+                        sendWebhook(PWConfig.getPackUpdateFailedEmbed());
+                    }
                     throw new RuntimeException(e);
                 }
             }), UPDATE_PACKWIZ_TASK_NAME, 10, messageSink));

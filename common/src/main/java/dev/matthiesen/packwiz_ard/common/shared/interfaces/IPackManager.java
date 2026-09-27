@@ -1,5 +1,7 @@
 package dev.matthiesen.packwiz_ard.common.shared.interfaces;
 
+import dev.matthiesen.packwiz_ard.common.PackWizardServerCommon;
+import dev.matthiesen.packwiz_ard.common.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackUrlException;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.network.chat.Component;
@@ -29,4 +31,10 @@ public interface IPackManager {
     }
 
     boolean update(String packLink, boolean hasBootstrap, Consumer<Component> messageSink, Runnable onSuccess, Consumer<Throwable> onFailure);
+
+    default void sendWebhook(PWConfig.DiscordEmbed embed) {
+        if (embed != null && PackWizardServerCommon.INSTANCE.getWebhookService() != null) {
+            PackWizardServerCommon.INSTANCE.getWebhookService().sendMessage(embed);
+        }
+    }
 }

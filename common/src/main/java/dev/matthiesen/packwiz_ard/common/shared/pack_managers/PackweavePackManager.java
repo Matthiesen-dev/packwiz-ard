@@ -8,6 +8,7 @@ package dev.matthiesen.packwiz_ard.common.shared.pack_managers;
 
 import dev.matthiesen.matthiesen_core.common.api.platform.loader.Environment;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
+import dev.matthiesen.packwiz_ard.common.PackWizardServerCommon;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.PackStatus;
 import dev.matthiesen.packwiz_ard.common.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.shared.exceptions.PackUrlException;
@@ -271,6 +272,10 @@ public final class PackweavePackManager implements IPackManager {
         if (!HAS_TASK.test(UPDATE_PACKWEAVE_TASK_NAME)) {
             TASKS.add(new AsyncCommandTask(CompletableFuture.runAsync(() -> {
                 try {
+                    if (PackWizardServerCommon.isServerRunning()) {
+                        sendWebhook(PWConfig.getPackUpdateTriggeredEmbed());
+                    }
+
                     String baseUrl = normalizeLink(resolvePackLink(packLink));
                     if (baseUrl == null || baseUrl.isBlank()) {
                         throw new IOException("No modpack URL provided.");
@@ -279,8 +284,14 @@ public final class PackweavePackManager implements IPackManager {
                     run(gameDir(), baseUrl, currentEnv(), inGame());
                     PWConfig.setPackTomlHash(getLatestPackHash(baseUrl));
                     onSuccess.run();
+                    if (PackWizardServerCommon.isServerRunning()) {
+                        sendWebhook(PWConfig.getPackUpdateFinishedEmbed());
+                    }
                 } catch (Exception e) {
                     onFailure.accept(e);
+                    if (PackWizardServerCommon.isServerRunning()) {
+                        sendWebhook(PWConfig.getPackUpdateFailedEmbed());
+                    }
                     throw new RuntimeException(e);
                 }
             }), UPDATE_PACKWEAVE_TASK_NAME, 10, messageSink));
