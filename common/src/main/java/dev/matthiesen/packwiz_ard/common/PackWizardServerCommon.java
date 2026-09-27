@@ -18,6 +18,10 @@ public final class PackWizardServerCommon {
     private volatile IWebhookService discordWebhookService;
     private boolean isServerRunning = false;
 
+    public static boolean isServerRunning() {
+        return INSTANCE.isServerRunning;
+    }
+
     public void initialize() {
         PackWizardCommon.INSTANCE.getCommandsRegistryManager().registerCommand(PackWizardCommand.CMD);
 
