@@ -49,11 +49,12 @@ import java.util.zip.ZipInputStream;
 
 public final class PackweavePackManager implements IPackManager {
     public static final String UPDATE_PACKWEAVE_TASK_NAME = "updatePackweave";
+    private static final int STATE_VERSION = 2;
     private static final String STATE_FILE = ".packweaver-state.json";
     private static final String WORK_DIR = ".packweaver";
     private static final String MODPACK_URL_FILE = "modpack.url";
     private static final String RELEASE_PREFIX = "release+";
-    private static final String UA = "packweave-installer/1.0.0 (+https://github.com/packweavers/packweave)";
+    private static final String UA = "packwiz-ard/1.0.0 (+https://github.com/Matthiesen-dev/packwiz-ard/)";
 
     private static final Component UPDATE_FINISHED = Component.literal("Packweave has finished updating. Restart for changes to take effect.");
     private static final List<AsyncCommandTask> TASKS = new ArrayList<>();
@@ -1192,14 +1193,30 @@ public final class PackweavePackManager implements IPackManager {
         }
     }
 
-    private static Map<String, String> loadState(Path dir) {
-        Map<String, String> out = new LinkedHashMap<>();
+    private static Map<String, Object> readStateSnapshot(Path dir) {
         Path f = dir.resolve(STATE_FILE);
         if (!Files.exists(f)) {
-            return out;
+            return null;
         }
         try {
             Map<String, Object> st = asMap(Json.parse(Files.readString(f)));
+            if (!String.valueOf(STATE_VERSION).equals(str(st.get("version")))) {
+                Files.deleteIfExists(f);
+                return null;
+            }
+            return st;
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    private static Map<String, String> loadState(Path dir) {
+        Map<String, String> out = new LinkedHashMap<>();
+        Map<String, Object> st = readStateSnapshot(dir);
+        if (st == null) {
+            return out;
+        }
+        try {
             Object files = st.get("files");
             if (files instanceof Map) {
                 for (Map.Entry<String, Object> e : asMap(files).entrySet()) {
@@ -1216,12 +1233,11 @@ public final class PackweavePackManager implements IPackManager {
 
     private static Map<String, String> loadStats(Path dir) {
         Map<String, String> out = new LinkedHashMap<>();
-        Path f = dir.resolve(STATE_FILE);
-        if (!Files.exists(f)) {
+        Map<String, Object> st = readStateSnapshot(dir);
+        if (st == null) {
             return out;
         }
         try {
-            Map<String, Object> st = asMap(Json.parse(Files.readString(f)));
             for (Map.Entry<String, Object> e : asMap(st.get("stat")).entrySet()) {
                 String v = str(e.getValue());
                 if (v != null && !v.isEmpty()) {
@@ -1234,12 +1250,11 @@ public final class PackweavePackManager implements IPackManager {
     }
 
     private static String[] loadMeta(Path dir) {
-        Path f = dir.resolve(STATE_FILE);
-        if (!Files.exists(f)) {
+        Map<String, Object> st = readStateSnapshot(dir);
+        if (st == null) {
             return new String[] { null, null };
         }
         try {
-            Map<String, Object> st = asMap(Json.parse(Files.readString(f)));
             return new String[] { str(st.get("tag")), str(st.get("etag")) };
         } catch (Exception ignore) {
             return new String[] { null, null };
@@ -1257,7 +1272,7 @@ public final class PackweavePackManager implements IPackManager {
         }
         List<String> keys = new ArrayList<>(state.keySet());
         Collections.sort(keys);
-        StringBuilder sb = new StringBuilder("{\"version\":2");
+        StringBuilder sb = new StringBuilder("{\"version\":" + STATE_VERSION);
         if (tag != null) {
             sb.append(",\"tag\":").append(Json.quote(tag));
         }
