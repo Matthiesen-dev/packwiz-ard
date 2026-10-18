@@ -33,6 +33,13 @@ public record PackStatus(
     public boolean isBusy() {
         return state == State.CHECKING || state == State.UPDATING;
     }
+
+    public boolean shouldChangeSplash() {
+        return switch (state) {
+            case RESTART_REQUIRED, UPDATE_AVAILABLE -> true;
+            default -> false;
+        };
+    }
 }
 
 

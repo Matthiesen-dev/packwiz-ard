@@ -38,7 +38,7 @@ update notifications, and the ability to easily update the client-side mods to m
 PackWiz-ard supports two updater backends:
 
 - **PackWiz**: the default mode. Set the `pack_toml` URL in the mod config and PackWiz-ard will use PackWiz to resolve and update the pack.
-- **Packweave**: an alternative mode. Place a `modpack.url` file in the root of the game directory and put the Packweave source URL in it. Packweave v2 is supported here; older v1 state files are discarded automatically on first use after upgrading.
+- **Packweave**: an alternative mode. Place a `modpack.url` file in the root of the game directory and put the Packweave source URL in it. Packweave v2 is supported here! Older v1 state files are discarded automatically on first use after upgrading.
 
 Use `/packwizard update` to sync the currently selected backend.
 

@@ -25,6 +25,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,11 +37,13 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
@@ -54,12 +57,30 @@ public final class PackweavePackManager implements IPackManager {
     private static final String WORK_DIR = ".packweaver";
     private static final String MODPACK_URL_FILE = "modpack.url";
     private static final String RELEASE_PREFIX = "release+";
+    private static final String CHECKED = "packweaver.checked";
+    private static final String RULE = "================================================================";
+    private static final Pattern RELEASE = Pattern.compile("\\d+(\\.\\d+)+");
+    private static final String[] LOADERS = { "fabric", "quilt", "forge", "neoforge" };
     private static final String UA = "packwiz-ard/1.0.0 (+https://github.com/Matthiesen-dev/packwiz-ard/)";
+    private static final String CONSOLE_LOG = "packwiz-ard: %s";
 
     private static final Component UPDATE_FINISHED = Component.literal("Packweave has finished updating. Restart for changes to take effect.");
     private static final List<AsyncCommandTask> TASKS = new ArrayList<>();
+    private static final AtomicBoolean MODS_CHANGED = new AtomicBoolean();
 
     private static final java.util.function.Predicate<String> HAS_TASK = name -> TASKS.stream().anyMatch(task -> task.hasName(name));
+
+    private static boolean restartRequired = false;
+
+    private static void consoleLog(String message) {
+        String log = String.format(CONSOLE_LOG, message);
+        System.out.println(log);
+    }
+
+    private static void consoleError(String message) {
+        String log = String.format(CONSOLE_LOG, message);
+        System.err.println(log);
+    }
 
     @Override
     public String getUpdateTaskName() {
@@ -99,6 +120,18 @@ public final class PackweavePackManager implements IPackManager {
                     null,
                     "Set a modpack.url link to check for client updates.",
                     false,
+                    false,
+                    false,
+                    checkedAt
+            );
+        }
+
+        if (restartRequired) {
+            return new PackStatus(
+                    PackStatus.State.RESTART_REQUIRED,
+                    normalizedLink,
+                    "The game needs to be restarted to apply updates.",
+                    true,
                     false,
                     false,
                     checkedAt
@@ -321,35 +354,87 @@ public final class PackweavePackManager implements IPackManager {
         } else {
             runCommit(dir, url, env, inGame);
         }
+
+        checkVersions(dir, inGame);
+        if (inGame && MODS_CHANGED.get()) {
+            restartRequired = true;
+            consoleLog("mods updated, please restart the game to play");
+        }
     }
 
     private static void runCommit(Path dir, String baseUrl, String env, boolean inGame) throws Exception {
+        String manifestText = "";
+        Map<String, Object> mp = null;
         try {
-            Map<String, Object> mp = asMap(Json.parse(get(baseUrl + "/modpack.json")));
+            String raw = remoteText(dir, baseUrl + "/modpack.json", "modpack.json");
+            if (raw == null) {
+                throw new IOException("HTTP 404 for " + baseUrl + "/modpack.json");
+            }
+            manifestText = raw;
+            cacheManifest(dir, raw.getBytes(StandardCharsets.UTF_8));
+            mp = asMap(Json.parse(raw));
             String mc = str(mp.get("minecraft"));
             String loader = str(mp.get("loader"));
-            System.out.println("packweave: syncing from " + baseUrl
+            consoleLog("syncing from " + baseUrl
                     + (mc != null ? " (Minecraft " + mc + (loader != null ? " / " + loader : "") + ")" : ""));
         } catch (Exception e) {
-            System.out.println("packweave: syncing from " + baseUrl);
+            consoleLog("syncing from " + baseUrl);
+            consoleError("! couldn't read modpack.json: " + e.getMessage());
         }
 
-        SyncInput input = buildFromSource(baseUrl, env);
-        int failed = apply(dir, input.tasks, input.local, input.preserve, inGame, null, null, false);
+        String indexText = remoteText(dir, baseUrl + "/index.json", "index.json");
+        if (indexText == null) {
+            throw new IOException("HTTP 404 for " + baseUrl + "/index.json");
+        }
+        String rulesText;
+        try {
+            rulesText = remoteText(dir, baseUrl + "/.packweaveunlock", ".packweaveunlock");
+            if (rulesText == null) {
+                rulesText = "";
+            }
+        } catch (IOException e) {
+            rulesText = readRulesText(dir);
+            if (rulesText == null) {
+                throw e;
+            }
+        }
+        saveRules(dir, rulesText);
+
+        String signature = "raw:" + sha1Of((manifestText + "\u0000" + indexText + "\u0000" + rulesText + "\u0000" + env).getBytes(StandardCharsets.UTF_8));
+        if (signature.equals(loadMeta(dir)[0])) {
+            List<String> needs = verifyFiles(dir, parsePreserve(rulesText));
+            if (needs.isEmpty()) {
+                consoleLog("up to date");
+                return;
+            }
+            consoleLog("repairing " + needs.size() + (needs.size() == 1 ? " file" : " files"));
+            SyncInput repaired = buildFromSource(dir, baseUrl, env, mp, indexText);
+            int failed = apply(dir, repairTasks(repaired.tasks, needs), repaired.local, repaired.preserve, inGame, null, null, true);
+            if (failed > 0) {
+                throw new IOException("Done with " + failed + " failures.");
+            }
+            return;
+        }
+
+        SyncInput input = buildFromSource(dir, baseUrl, env, mp, indexText);
+        input.rules = rulesText;
+        input.preserve = parsePreserve(rulesText);
+        int failed = apply(dir, input.tasks, input.local, input.preserve, inGame, signature, null, false);
         if (failed > 0) {
             throw new IOException("Done with " + failed + " failures.");
         }
     }
 
     private static void runRelease(Path dir, String webUrl, String env, boolean inGame) throws Exception {
-        System.out.println("packweave: syncing from " + webUrl);
+        consoleLog("syncing from " + webUrl);
         String token = readToken(dir);
         String[] or = ownerRepo(webUrl);
         String repoApi = apiBase(webUrl) + "/repos/" + or[0] + "/" + or[1];
         String[] meta = loadMeta(dir);
         String lastTag = meta[0];
+        boolean needManifest = !Files.isRegularFile(dir.resolve(WORK_DIR).resolve("modpack.json"));
 
-        ApiResp resp = apiGet(repoApi + "/releases/latest", token, lastTag != null ? meta[1] : null);
+        ApiResp resp = apiGet(repoApi + "/releases/latest", token, lastTag != null && !needManifest ? meta[1] : null);
         if (resp.code == 304) {
             verifyLocal(dir, repoApi, token, env, inGame, lastTag);
             return;
@@ -374,15 +459,15 @@ public final class PackweavePackManager implements IPackManager {
             }
         }
 
-        if (tag.equals(lastTag)) {
+        if (tag.equals(lastTag) && !needManifest) {
             saveState(dir, loadState(dir), tag, resp.etag, null);
             verifyLocal(dir, repoApi, token, env, inGame, tag);
             return;
         }
 
-        System.out.println("packweave: updating to " + tag);
+        consoleLog("updating to " + tag);
         String packUrl = assets.get("pack.zip");
-        String deltaName = lastTag == null ? null : "delta-" + lastTag + ".zip";
+        String deltaName = lastTag == null || needManifest ? null : "delta-" + lastTag + ".zip";
         boolean usedDelta = false;
         Map<String, byte[]> entries;
 
@@ -405,6 +490,11 @@ public final class PackweavePackManager implements IPackManager {
             in = buildFromZip(entries, env);
         }
 
+        byte[] mpBytes = entries.get("modpack.json");
+        if (mpBytes != null) {
+            cacheManifest(dir, mpBytes);
+        }
+
         byte[] newToken = entries.get("modpack.token");
         if (newToken != null) {
             String t = cleanToken(new String(newToken, StandardCharsets.UTF_8));
@@ -412,6 +502,17 @@ public final class PackweavePackManager implements IPackManager {
                 atomicWrite(dir.resolve("modpack.token"), (t + "\n").getBytes(StandardCharsets.UTF_8));
             }
         }
+
+        byte[] newUrl = entries.get("modpack.url");
+        if (newUrl != null) {
+            String moved = cleanUrl(new String(newUrl, StandardCharsets.UTF_8));
+            if (moved != null && !moved.equalsIgnoreCase(RELEASE_PREFIX + webUrl)) {
+                atomicWrite(dir.resolve("modpack.url"), (moved + "\n").getBytes(StandardCharsets.UTF_8));
+                consoleLog("the pack moved to " + moved);
+            }
+        }
+
+        saveRules(dir, in.rules);
 
         int failed = apply(dir, in.tasks, in.local, in.preserve, inGame, tag, resp.etag, false);
         if (failed > 0) {
@@ -435,26 +536,24 @@ public final class PackweavePackManager implements IPackManager {
                 needs.add(rel);
                 continue;
             }
-            if (!contentPath(rel)) {
-                continue;
-            }
+            if (contentPath(rel)) {
+                String cur;
+                try {
+                    cur = Files.size(p) + "," + Files.getLastModifiedTime(p).toMillis();
+                } catch (Exception ex) {
+                    cur = "";
+                }
 
-            String cur;
-            try {
-                cur = Files.size(p) + "," + Files.getLastModifiedTime(p).toMillis();
-            } catch (Exception ex) {
-                cur = "";
-            }
+                if (cur.equals(stats.get(rel))) {
+                    continue;
+                }
 
-            if (cur.equals(stats.get(rel))) {
-                continue;
-            }
-
-            String disk = diskSha(p);
-            if (disk != null && disk.equalsIgnoreCase(e.getValue())) {
-                stats.put(rel, cur);
-                dirty = true;
-                continue;
+                String disk = diskSha(p);
+                if (disk != null && disk.equalsIgnoreCase(e.getValue())) {
+                    stats.put(rel, cur);
+                    dirty = true;
+                    continue;
+                }
             }
             needs.add(rel);
         }
@@ -463,11 +562,11 @@ public final class PackweavePackManager implements IPackManager {
             if (dirty) {
                 saveState(dir, state, null, null, stats);
             }
-            System.out.println("packweave: up to date (" + tag + ")");
+            consoleLog("up to date (" + tag + ")");
             return;
         }
 
-        System.out.println("packweave: repairing " + needs.size() + (needs.size() == 1 ? " file" : " files"));
+        consoleLog("repairing " + needs.size() + (needs.size() == 1 ? " file" : " files"));
 
         ApiResp resp = apiGet(repoApi + "/releases/latest", token, null);
         if (resp.body == null) {
@@ -503,11 +602,62 @@ public final class PackweavePackManager implements IPackManager {
     }
 
     private static boolean contentPath(String rel) {
-        return rel.startsWith("mods/") || rel.startsWith("resourcepacks/") || rel.startsWith("shaderpacks/");
+        return rel.startsWith("mods/") || rel.startsWith("resourcepacks/") || rel.startsWith("shaderpacks/") || rel.startsWith("datapacks/") || isDocument(rel);
+    }
+
+    private static List<String> verifyFiles(Path dir, List<Pattern> preserve) {
+        Map<String, String> state = loadState(dir);
+        Map<String, String> stats = loadStats(dir);
+        List<String> needs = new ArrayList<>();
+
+        for (Map.Entry<String, String> e : state.entrySet()) {
+            String rel = e.getKey();
+            Path p = dir.resolve(rel);
+            if (!Files.isRegularFile(p)) {
+                if (!Files.isRegularFile(dir.resolve(rel + ".disabled"))) {
+                    needs.add(rel);
+                }
+                continue;
+            }
+            if (contentPath(rel)) {
+                String cur;
+                try {
+                    cur = Files.size(p) + "," + Files.getLastModifiedTime(p).toMillis();
+                } catch (Exception ex) {
+                    cur = "";
+                }
+
+                if (cur.equals(stats.get(rel))) {
+                    continue;
+                }
+
+                String disk = diskSha(p);
+                if (disk != null && disk.equalsIgnoreCase(e.getValue())) {
+                    stats.put(rel, cur);
+                    continue;
+                }
+                if (matches(preserve, rel)) {
+                    continue;
+                }
+            }
+            needs.add(rel);
+        }
+
+        return needs;
     }
 
     private static SyncInput buildFromZip(Map<String, byte[]> entries, String env) throws IOException {
         SyncInput in = new SyncInput();
+        Map<String, Object> manifest = null;
+        byte[] mpBytes = entries.get("modpack.json");
+        if (mpBytes != null) {
+            try {
+                manifest = asMap(Json.parse(new String(mpBytes, StandardCharsets.UTF_8)));
+            } catch (Exception e) {
+                consoleError("! the release's modpack.json isn't valid: " + e.getMessage());
+            }
+        }
+        String datapacks = datapackFolder(manifest);
         byte[] idx = entries.get("index.json");
         if (idx == null) {
             throw new IOException("Release is missing index.json.");
@@ -522,10 +672,10 @@ public final class PackweavePackManager implements IPackManager {
             if (path.startsWith("content/") && path.endsWith(".json")) {
                 byte[] cj = entries.get(path);
                 if (cj == null) {
-                    System.err.println("  ! " + path + ": missing from release");
+                    consoleError("! " + path + ": missing from release");
                     continue;
                 }
-                String[] t = contentTask(path, asMap(Json.parse(new String(cj, StandardCharsets.UTF_8))), env);
+                String[] t = contentTask(path, asMap(Json.parse(new String(cj, StandardCharsets.UTF_8))), env, datapacks);
                 if (t != null) {
                     in.tasks.add(t);
                 }
@@ -539,11 +689,18 @@ public final class PackweavePackManager implements IPackManager {
                 if (bytes != null) {
                     in.local.put(inst, bytes);
                 }
+            } else if (isDocument(path)) {
+                in.tasks.add(new String[] { path, null, str(f.get("sha1")) });
+                byte[] bytes = entries.get(path);
+                if (bytes != null) {
+                    in.local.put(path, bytes);
+                }
             }
         }
-        byte[] pres = entries.get("preserve.txt");
+        byte[] pres = entries.get(".packweaveunlock");
         if (pres != null) {
             in.preserve = parsePreserve(new String(pres, StandardCharsets.UTF_8));
+            in.rules = new String(pres, StandardCharsets.UTF_8);
         }
         return in;
     }
@@ -562,11 +719,12 @@ public final class PackweavePackManager implements IPackManager {
         return false;
     }
 
-    private static SyncInput buildFromSource(String baseUrl, String env) throws Exception {
+    private static SyncInput buildFromSource(Path dir, String baseUrl, String env, Map<String, Object> manifest, String indexText) throws Exception {
         SyncInput in = new SyncInput();
-        Map<String, Object> index = asMap(Json.parse(get(baseUrl + "/index.json")));
+        Map<String, Object> index = asMap(Json.parse(indexText));
+        String datapacks = datapackFolder(manifest);
 
-        List<String> contentPaths = new ArrayList<>();
+        Map<String, String> contentPaths = new LinkedHashMap<>();
         for (Object eo : asList(index.get("files"))) {
             Map<String, Object> f = asMap(eo);
             String path = str(f.get("path"));
@@ -574,25 +732,31 @@ public final class PackweavePackManager implements IPackManager {
                 continue;
             }
             if (path.startsWith("content/") && path.endsWith(".json")) {
-                contentPaths.add(path);
+                contentPaths.put(path, str(f.get("sha1")));
             } else if (path.startsWith("overrides/")) {
                 String inst = path.substring("overrides/".length());
                 if (!inst.isEmpty()) {
                     in.tasks.add(new String[] { inst, null, str(f.get("sha1")) });
                     in.local.put(inst, getBytes(baseUrl + "/" + enc(path)));
                 }
+            } else if (isDocument(path)) {
+                in.tasks.add(new String[] { path, null, str(f.get("sha1")) });
+                in.local.put(path, getBytes(baseUrl + "/" + enc(path)));
             }
         }
 
         ExecutorService metaPool = Executors.newFixedThreadPool(8);
         List<Future<String[]>> metaFutures = new ArrayList<>();
-        for (final String cp : contentPaths) {
+        for (final Map.Entry<String, String> entry : contentPaths.entrySet()) {
+            final String cp = entry.getKey();
+            final String sha1 = entry.getValue();
             metaFutures.add(metaPool.submit(() -> {
                 try {
-                    Map<String, Object> m = asMap(Json.parse(get(baseUrl + "/" + enc(cp))));
-                    return contentTask(cp, m, env);
+                    String text = contentJson(dir, baseUrl, cp, sha1);
+                    Map<String, Object> m = asMap(Json.parse(text));
+                    return contentTask(cp, m, env, datapacks);
                 } catch (Exception e) {
-                    System.err.println("  ! " + cp + ": " + e.getMessage());
+                    consoleError("! " + cp + ": " + e.getMessage());
                     return null;
                 }
             }));
@@ -605,17 +769,35 @@ public final class PackweavePackManager implements IPackManager {
         }
         metaPool.shutdown();
 
+        String rulesText;
         try {
-            byte[] pres = getBytes(baseUrl + "/preserve.txt");
-            in.preserve = parsePreserve(new String(pres, StandardCharsets.UTF_8));
-        } catch (Exception ignore) {
-            in.preserve = new ArrayList<>();
+            rulesText = remoteText(dir, baseUrl + "/.packweaveunlock", ".packweaveunlock");
+            if (rulesText == null) {
+                rulesText = "";
+            }
+        } catch (Exception e) {
+            rulesText = readRulesText(dir);
+            if (rulesText == null) {
+                rulesText = "";
+            }
         }
+        in.rules = rulesText;
+        in.preserve = parsePreserve(rulesText);
 
         return in;
     }
 
-    private static String[] contentTask(String cp, Map<String, Object> m, String env) {
+    private static List<String[]> repairTasks(List<String[]> all, List<String> needs) {
+        List<String[]> tasks = new ArrayList<>();
+        for (String[] t : all) {
+            if (needs.contains(t[0])) {
+                tasks.add(t);
+            }
+        }
+        return tasks;
+    }
+
+    private static String[] contentTask(String cp, Map<String, Object> m, String env, String datapacks) {
         Map<String, Object> src = asMap(asMap(m.get("sources")).get(str(m.get("preferred"))));
         String dl = str(src.get("downloadUrl"));
         String fn = str(src.get("filename"));
@@ -630,8 +812,350 @@ public final class PackweavePackManager implements IPackManager {
         }
         String[] segs = cp.split("/");
         String sub = segs.length >= 2 ? segs[1] : "mods";
-        String folder = "shaders".equals(sub) ? "shaderpacks" : sub;
+        String folder = "shaders".equals(sub) ? "shaderpacks" : "datapacks".equals(sub) ? datapacks : sub;
         return new String[] { folder + "/" + fn, dl, str(src.get("sha1")) };
+    }
+
+    private static boolean isDocument(String path) {
+        return path.indexOf('/') < 0 && path.toLowerCase(java.util.Locale.ROOT).endsWith(".md");
+    }
+
+    private static String datapackFolder(Map<String, Object> manifest) {
+        String folder = manifest == null ? null : safeRel(str(manifest.get("datapacks")));
+        return folder == null ? "datapacks" : folder;
+    }
+
+    private static String contentJson(Path dir, String baseUrl, String path, String sha1) throws Exception {
+        Path cache = sha1 == null || sha1.isEmpty() ? null : dir.resolve(WORK_DIR).resolve("content").resolve(sha1.toLowerCase(java.util.Locale.ROOT) + ".json");
+        if (cache != null && Files.isRegularFile(cache)) {
+            return Files.readString(cache);
+        }
+        byte[] bytes = getBytes(baseUrl + "/" + enc(path));
+        if (cache != null) {
+            if (!sha1.equalsIgnoreCase(sha1Of(bytes))) {
+                throw new IOException(path + " doesn't match index.json yet. Try again in a few minutes");
+            }
+            Files.createDirectories(cache.getParent());
+            atomicWrite(cache, bytes);
+        }
+        return new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    private static String remoteText(Path dir, String url, String name) throws IOException {
+        Path folder = dir.resolve(WORK_DIR).resolve("remote");
+        Path body = folder.resolve(name);
+        Path tagFile = folder.resolve(name + ".etag");
+        String etag = null;
+        if (Files.isRegularFile(body) && Files.isRegularFile(tagFile)) {
+            etag = Files.readString(tagFile).trim();
+        }
+        Remote r = fetchRemote(url, etag);
+        if (r.code == 304 && Files.isRegularFile(body)) {
+            return Files.readString(body);
+        }
+        if (r.code == 304) {
+            r = fetchRemote(url, null);
+        }
+        if (r.code == 404) {
+            Files.deleteIfExists(body);
+            Files.deleteIfExists(tagFile);
+            return null;
+        }
+        Files.createDirectories(folder);
+        atomicWrite(body, r.body);
+        if (r.etag != null && !r.etag.isEmpty()) {
+            atomicWrite(tagFile, r.etag.getBytes(StandardCharsets.UTF_8));
+        } else {
+            Files.deleteIfExists(tagFile);
+        }
+        return new String(r.body, StandardCharsets.UTF_8);
+    }
+
+    private static final class Remote {
+        private int code;
+        private byte[] body;
+        private String etag;
+    }
+
+    private static Remote fetchRemote(String url, String etag) throws IOException {
+        String current = url;
+        for (int i = 0; i < 5; i++) {
+            HttpURLConnection c = (HttpURLConnection) URI.create(current).toURL().openConnection();
+            c.setInstanceFollowRedirects(false);
+            c.setConnectTimeout(15000);
+            c.setReadTimeout(60000);
+            c.setRequestProperty("User-Agent", UA);
+            if (etag != null && !etag.isEmpty()) {
+                c.setRequestProperty("If-None-Match", etag);
+            }
+            Remote r = new Remote();
+            r.code = c.getResponseCode();
+            if (r.code == 304 || r.code == 404) {
+                c.disconnect();
+                return r;
+            }
+            if (r.code / 100 == 3) {
+                String loc = c.getHeaderField("Location");
+                c.disconnect();
+                if (loc == null) {
+                    throw new IOException("HTTP " + r.code + " for " + current);
+                }
+                current = URI.create(current).resolve(loc).toString();
+                continue;
+            }
+            if (r.code / 100 != 2) {
+                c.disconnect();
+                throw new IOException("HTTP " + r.code + " for " + current);
+            }
+            r.etag = c.getHeaderField("ETag");
+            try (InputStream in = c.getInputStream()) {
+                r.body = readAll(in);
+            }
+            return r;
+        }
+        throw new IOException("Too many redirects for " + url);
+    }
+
+    private static void cacheManifest(Path dir, byte[] bytes) {
+        try {
+            Path f = dir.resolve(WORK_DIR).resolve("modpack.json");
+            Files.createDirectories(f.getParent());
+            atomicWrite(f, bytes);
+        } catch (Exception e) {
+            consoleError("! couldn't save modpack.json: " + e.getMessage());
+        }
+    }
+
+    private static Map<String, Object> cachedManifest(Path dir) {
+        Path f = dir.resolve(WORK_DIR).resolve("modpack.json");
+        if (!Files.isRegularFile(f)) {
+            return null;
+        }
+        try {
+            return asMap(Json.parse(Files.readString(f)));
+        } catch (Exception e) {
+            consoleError("! could not read modpack.json: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private static void saveRules(Path dir, String text) {
+        try {
+            Path f = dir.resolve(WORK_DIR).resolve("unlock");
+            Files.createDirectories(f.getParent());
+            atomicWrite(f, (text == null ? "" : text).getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            consoleError("! couldn't save the unlock rules: " + e.getMessage());
+        }
+    }
+
+    private static String readRulesText(Path dir) {
+        try {
+            Path f = dir.resolve(WORK_DIR).resolve("unlock");
+            return Files.isRegularFile(f) ? Files.readString(f) : null;
+        } catch (Exception e) {
+            consoleError("! couldn't read the saved unlock rules: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private static void checkVersions(Path dir, boolean inGame) {
+        Map<String, Object> mp = cachedManifest(dir);
+        if (mp == null) {
+            return;
+        }
+        Versions have = inGame ? runningVersions() : instanceVersions(dir);
+        if (have == null) {
+            return;
+        }
+        System.setProperty(CHECKED, "1");
+        String wantMc = blank(str(mp.get("minecraft")));
+        String wantLoader = blank(str(mp.get("loader")));
+        String wantLv = blank(str(mp.get("loaderVersion")));
+        boolean stop = false;
+        if (wantMc != null && have.minecraft != null && !wantMc.equals(have.minecraft)) {
+            stop = RELEASE.matcher(wantMc).matches() && RELEASE.matcher(have.minecraft).matches();
+            banner("WRONG MINECRAFT VERSION", "This pack needs Minecraft " + wantMc + ". This instance runs Minecraft " + have.minecraft + ".", "Change the instance's Minecraft version to " + wantMc + " in your launcher" + (stop ? ", then start the game again." : ". The game may crash until you do."));
+        }
+        if (wantLoader != null && !wantLoader.equalsIgnoreCase("vanilla")) {
+            String loader = wantLoader.toLowerCase(java.util.Locale.ROOT);
+            String wanted = loaderText(loader, wantLv);
+            if (!sameLoader(loader, have.loader, wantMc)) {
+                banner("WRONG MOD LOADER", "This pack uses " + wanted + ". This instance runs " + (have.loader == null ? "no mod loader" : loaderText(have.loader, have.loaderVersion)) + ".", "Switch the instance to " + wanted + " in your launcher. The game may crash until you do.");
+            } else if (wantLv != null && have.loaderVersion != null && !wantLv.equals(have.loaderVersion)) {
+                banner("WRONG LOADER VERSION", "This pack uses " + wanted + ". This instance runs " + loaderText(loader, have.loaderVersion) + ".", "Change the instance's " + loaderName(loader) + " version to " + wantLv + " in your launcher. The game may crash until you do.");
+            }
+        }
+        if (stop) {
+            consoleError(inGame ? "closing the game" : "stopping this launch");
+            System.exit(1);
+        }
+    }
+
+    private static void banner(String title, String problem, String fix) {
+        consoleError(RULE);
+        consoleError(title);
+        consoleError(problem);
+        consoleError(fix);
+        consoleError(RULE);
+    }
+
+    private static boolean sameLoader(String want, String have, String minecraft) {
+        if (want.equals(have)) {
+            return true;
+        }
+        return want.equals("neoforge") && "forge".equals(have) && "1.20.1".equals(minecraft);
+    }
+
+    private static String loaderText(String loader, String version) {
+        return version == null ? loaderName(loader) : loaderName(loader) + " " + version;
+    }
+
+    private static String loaderName(String loader) {
+        if (loader == null) {
+            return "";
+        }
+        return switch (loader) {
+            case "fabric" -> "Fabric";
+            case "quilt" -> "Quilt";
+            case "forge" -> "Forge";
+            case "neoforge" -> "NeoForge";
+            default -> loader;
+        };
+    }
+
+    private static Versions instanceVersions(Path dir) {
+        Path root = instanceRoot(dir);
+        if (root == null) {
+            return null;
+        }
+        try {
+            Map<String, Object> pack = asMap(Json.parse(Files.readString(root.resolve("mmc-pack.json"))));
+            List<Object> comps = asList(pack.get("components"));
+            String mc = blank(componentVersion(comps, "net.minecraft"));
+            if (mc == null) {
+                return null;
+            }
+            for (String loader : LOADERS) {
+                String version = componentVersion(comps, loaderUid(loader));
+                if (version != null) {
+                    return new Versions(mc, loader, blank(version));
+                }
+            }
+            return new Versions(mc, null, null);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static Versions runningVersions() {
+        try {
+            Class<?> fl = Class.forName("net.fabricmc.loader.api.FabricLoader");
+            Object loader = fl.getMethod("getInstance").invoke(null);
+            boolean quilt = hasQuiltClass();
+            return new Versions(fabricVersion(fl, loader, "minecraft"), quilt ? "quilt" : "fabric", fabricVersion(fl, loader, quilt ? "quilt_loader" : "fabricloader"));
+        } catch (Throwable ignore) {
+        }
+        Versions neo = fmlVersions("net.neoforged.fml", "neoforge");
+        return neo != null ? neo : fmlVersions("net.minecraftforge.fml", "forge");
+    }
+
+    private static Versions fmlVersions(String fml, String loader) {
+        try {
+            return new Versions(fmlVersion(fml, "minecraft"), loader, fmlVersion(fml, loader));
+        } catch (Throwable ignore) {
+            return null;
+        }
+    }
+
+    private static String fabricVersion(Class<?> fl, Object loader, String id) throws Exception {
+        Object found = ((Optional<?>) fl.getMethod("getModContainer", String.class).invoke(loader, id)).orElse(null);
+        if (found == null) {
+            return null;
+        }
+        Object meta = Class.forName("net.fabricmc.loader.api.ModContainer").getMethod("getMetadata").invoke(found);
+        Object version = Class.forName("net.fabricmc.loader.api.ModMetadata").getMethod("getVersion").invoke(meta);
+        Object text = Class.forName("net.fabricmc.loader.api.Version").getMethod("getFriendlyString").invoke(version);
+        return text == null ? null : blank(text.toString());
+    }
+
+    private static String fmlVersion(String fml, String id) throws Exception {
+        Class<?> list = Class.forName(fml + ".ModList");
+        Object mods = list.getMethod("get").invoke(null);
+        Object found = ((Optional<?>) list.getMethod("getModContainerById", String.class).invoke(mods, id)).orElse(null);
+        if (found == null) {
+            return null;
+        }
+        Method info = Class.forName(fml + ".ModContainer").getMethod("getModInfo");
+        Object version = info.getReturnType().getMethod("getVersion").invoke(info.invoke(found));
+        return version == null ? null : blank(version.toString());
+    }
+
+    private static boolean hasQuiltClass() {
+        try {
+            Class.forName("org.quiltmc.loader.api.QuiltLoader", false, PackweavePackManager.class.getClassLoader());
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    private static String blank(String s) {
+        if (s == null) {
+            return null;
+        }
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    private static String loaderUid(String loader) {
+        if (loader == null) {
+            return null;
+        }
+        return switch (loader.trim().toLowerCase(java.util.Locale.ROOT)) {
+            case "fabric" -> "net.fabricmc.fabric-loader";
+            case "quilt" -> "org.quiltmc.quilt-loader";
+            case "forge" -> "net.minecraftforge";
+            case "neoforge", "neoforged" -> "net.neoforged";
+            default -> null;
+        };
+    }
+
+    private static Path instanceRoot(Path gameDir) {
+        Path parent = gameDir.getParent();
+        if (parent != null && Files.isRegularFile(parent.resolve("mmc-pack.json"))) {
+            return parent;
+        }
+        if (Files.isRegularFile(gameDir.resolve("mmc-pack.json"))) {
+            return gameDir;
+        }
+        return null;
+    }
+
+    private static String componentVersion(List<Object> comps, String uid) {
+        if (uid == null) {
+            return null;
+        }
+        for (Object o : comps) {
+            Map<String, Object> c = asMap(o);
+            if (uid.equals(str(c.get("uid")))) {
+                String v = str(c.get("version"));
+                return v == null ? "" : v;
+            }
+        }
+        return null;
+    }
+
+    private static final class Versions {
+        private final String minecraft;
+        private final String loader;
+        private final String loaderVersion;
+
+        private Versions(String minecraft, String loader, String loaderVersion) {
+            this.minecraft = minecraft;
+            this.loader = loader;
+            this.loaderVersion = loaderVersion;
+        }
     }
 
     private static int apply(Path dir, List<String[]> tasksIn, final Map<String, byte[]> local,
@@ -644,7 +1168,7 @@ public final class PackweavePackManager implements IPackManager {
         for (String[] t : tasksIn) {
             String rel = safeRel(t[0]);
             if (rel == null) {
-                System.err.println("  ! skipped unsafe path: " + t[0]);
+                consoleError("! skipped unsafe path: " + t[0]);
                 continue;
             }
             t[0] = rel;
@@ -684,7 +1208,7 @@ public final class PackweavePackManager implements IPackManager {
                 }
             }
             if (disk != null && matches(preserve, old) && !disk.equalsIgnoreCase(e.getValue())) {
-                System.out.println("  ~ kept " + old + " (edited locally)");
+                consoleLog("~ kept " + old + " (edited locally)");
                 continue;
             }
             if (disk != null && inGame) {
@@ -707,6 +1231,7 @@ public final class PackweavePackManager implements IPackManager {
         final Map<String, String> prevState = state;
         ExecutorService pool = Executors.newFixedThreadPool(8);
         List<Future<?>> futures = new ArrayList<>();
+        final AtomicBoolean modsChanged = new AtomicBoolean();
 
         for (final String[] d : downloads) {
             futures.add(pool.submit(() -> {
@@ -735,7 +1260,7 @@ public final class PackweavePackManager implements IPackManager {
                         if (wrote != null) {
                             newState.put(rel, wrote);
                         }
-                        System.out.println("  ~ kept " + rel + " (edited locally)");
+                        consoleLog("~ kept " + rel + " (edited locally)");
                         done.incrementAndGet();
                         return;
                     }
@@ -754,6 +1279,9 @@ public final class PackweavePackManager implements IPackManager {
                     }
 
                     boolean stage = game && Files.exists(out);
+                    if (rel.startsWith("mods/") && !rel.equals("packweaver.jar")) {
+                        modsChanged.set(true);
+                    }
                     if (!stage) {
                         try {
                             if (out.getParent() != null) {
@@ -763,7 +1291,7 @@ public final class PackweavePackManager implements IPackManager {
                             newState.put(rel, got);
                             recordStat(newStats, root, rel);
                             int n = done.incrementAndGet();
-                            System.out.println("  [" + n + "/" + total + "] " + rel);
+                            consoleLog("[" + n + "/" + total + "] " + rel);
                             return;
                         } catch (IOException ignored) {
                         }
@@ -777,10 +1305,10 @@ public final class PackweavePackManager implements IPackManager {
                         newState.put(rel, wrote);
                     }
                     int n = done.incrementAndGet();
-                    System.out.println("  [" + n + "/" + total + "] " + rel + " (queued)");
+                    consoleLog("[" + n + "/" + total + "] " + rel + " (queued)");
                 } catch (Exception e) {
                     failed.incrementAndGet();
-                    System.err.println("  ! " + rel + ": " + e.getMessage());
+                    consoleError("! " + rel + ": " + e.getMessage());
                 }
             }));
         }
@@ -796,13 +1324,16 @@ public final class PackweavePackManager implements IPackManager {
         if (!pending.isEmpty()) {
             savePending(dir, pending);
             scheduleHelper(dir);
-            System.out.println("packweave: " + pending.size() + (pending.size() == 1 ? " change finishes" : " changes finish") + " after the game closes");
+            consoleLog("packweave: " + pending.size() + (pending.size() == 1 ? " change finishes" : " changes finish") + " after the game closes");
         }
 
         if (failed.get() > 0) {
-            System.out.println("Done with " + failed.get() + " failures, " + newState.size() + " files tracked in " + dir);
+            consoleLog("Done with " + failed.get() + " failures, " + newState.size() + " files tracked in " + dir);
         } else {
-            System.out.println("Up to date, " + newState.size() + " files in " + dir);
+            consoleLog("Up to date, " + newState.size() + " files in " + dir);
+        }
+        if (modsChanged.get()) {
+            MODS_CHANGED.set(true);
         }
         return failed.get();
     }
@@ -878,6 +1409,24 @@ public final class PackweavePackManager implements IPackManager {
             }
         }
         return t.isEmpty() ? null : t;
+    }
+
+    private static String cleanUrl(String raw) {
+        String url = raw.replace("\uFEFF", "").replace("\"", "").replace("'", "").trim();
+        if (url.startsWith(RELEASE_PREFIX)) {
+            url = RELEASE_PREFIX + url.substring(RELEASE_PREFIX.length()).trim();
+        }
+        for (int i = 0; i < url.length(); i++) {
+            if (Character.isWhitespace(url.charAt(i))) {
+                url = url.substring(0, i);
+                break;
+            }
+        }
+        url = url.replaceAll("/+$", "");
+        if (!url.startsWith("http://") && !url.startsWith("https://") && !url.startsWith(RELEASE_PREFIX)) {
+            return null;
+        }
+        return url;
     }
 
     private static String readModpackUrl(Path dir) throws IOException {
@@ -1444,6 +1993,7 @@ public final class PackweavePackManager implements IPackManager {
         private final List<String[]> tasks = new ArrayList<>();
         private final Map<String, byte[]> local = new HashMap<>();
         private List<Pattern> preserve = new ArrayList<>();
+        private String rules = "";
     }
 
     private static final class Json {
