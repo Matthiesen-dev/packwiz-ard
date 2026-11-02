@@ -1,6 +1,5 @@
 package dev.matthiesen.packwiz_ard.common.config;
 
-import com.google.gson.annotations.SerializedName;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -152,13 +151,8 @@ public final class PWConfig {
     }
 
     public static class DiscordEmbedField {
-        @SerializedName("name")
         public String name;
-
-        @SerializedName("value")
         public String value;
-
-        @SerializedName("inline")
         public boolean inline;
 
         public static DiscordEmbedField create(String name, String value, boolean inline) {

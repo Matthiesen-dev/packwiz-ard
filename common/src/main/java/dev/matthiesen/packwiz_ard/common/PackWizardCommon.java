@@ -1,6 +1,6 @@
 package dev.matthiesen.packwiz_ard.common;
 
-import dev.matthiesen.libs.faststats.Token;
+import dev.faststats.Token;
 import dev.matthiesen.matthiesen_core.common.AbstractCommonMod;
 import dev.matthiesen.matthiesen_core.common.api.platform.loader.ModConfigType;
 import dev.matthiesen.packwiz_ard.common.shared.pack_managers.PackweavePackManager;
@@ -26,17 +26,13 @@ public final class PackWizardCommon extends AbstractCommonMod {
         super(MOD_ID, MOD_NAME);
     }
 
-    public static String configPath(String path) {
-        return MOD_ID + "/" + path + ".toml";
-    }
-
     @Override
     public void initialize() {
         super.initialize();
 
-        registerModConfig(MOD_ID, ModConfigType.STARTUP, PWConfig.COMMON_SPEC, configPath("common"));
-        registerModConfig(MOD_ID, ModConfigType.SERVER, PWConfig.SERVER_SPEC, configPath("server"));
-        registerModConfig(MOD_ID, ModConfigType.CLIENT, PWConfig.CLIENT_SPEC, configPath("client"));
+        registerModConfig(MOD_ID, ModConfigType.STARTUP, PWConfig.COMMON_SPEC, modConfigPath("common"));
+        registerModConfig(MOD_ID, ModConfigType.STARTUP, PWConfig.SERVER_SPEC, modConfigPath("server"));
+        registerModConfig(MOD_ID, ModConfigType.CLIENT, PWConfig.CLIENT_SPEC, modConfigPath("client"));
 
         CommonConfig.UPDATER updater = PWConfig.COMMON_CONFIG.updater.get();
         switch (updater) {

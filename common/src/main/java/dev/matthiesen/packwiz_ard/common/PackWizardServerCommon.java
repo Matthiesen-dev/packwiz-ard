@@ -4,7 +4,6 @@ import dev.matthiesen.matthiesen_core.common.api.events.PlatformEvents;
 import dev.matthiesen.packwiz_ard.common.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.server.commands.PackWizardCommand;
 import dev.matthiesen.packwiz_ard.common.server.webhook.DiscordWebhookService;
-import dev.matthiesen.packwiz_ard.common.server.webhook.NoOpWebhookService;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.IWebhookService;
 import net.minecraft.server.MinecraftServer;
 
@@ -15,7 +14,7 @@ public final class PackWizardServerCommon {
 
     private long autoUpdateTicks = 0L;
     private boolean warnedInvalidAutoUpdateInterval = false;
-    private volatile IWebhookService discordWebhookService;
+    private final IWebhookService discordWebhookService = new DiscordWebhookService();
     private boolean isServerRunning = false;
 
     public static boolean isServerRunning() {
@@ -41,12 +40,6 @@ public final class PackWizardServerCommon {
                 INSTANCE.tickAutoUpdate(event.server());
             }
         });
-
-        if (PackWizardCommon.INSTANCE.getCommonUtils().isModLoaded("matthiesen_core_webhooks")) {
-            discordWebhookService = new DiscordWebhookService();
-        } else {
-            discordWebhookService = new NoOpWebhookService();
-        }
     }
 
     public IWebhookService getWebhookService() {
