@@ -33,7 +33,7 @@ public interface IPackManager {
     boolean update(String packLink, boolean hasBootstrap, Consumer<Component> messageSink, Runnable onSuccess, Consumer<Throwable> onFailure);
 
     default void sendWebhook(PWConfig.DiscordEmbed embed) {
-        if (embed != null && PackWizardServerCommon.INSTANCE.getWebhookService() != null) {
+        if (embed != null) {
             PackWizardServerCommon.INSTANCE.getWebhookService().sendMessage(embed);
         }
     }

@@ -1,6 +1,6 @@
 package dev.matthiesen.packwiz_ard.common.config;
 
-import dev.matthiesen.matthiesen_core.common.core.discord.DiscordColor;
+import dev.matthiesen.matthiesen_core.common.api.discord.DiscordColor;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 public final class ServerConfig {

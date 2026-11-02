@@ -2,9 +2,8 @@ package dev.matthiesen.packwiz_ard.common.server.webhook;
 
 import dev.matthiesen.matthiesen_core.common.api.discord.WebhookNotifierInstance;
 import dev.matthiesen.matthiesen_core.common.api.discord.WebhookNotifierService;
-import dev.matthiesen.matthiesen_core.common.api.exceptions.DiscordWebhookException;
+import dev.matthiesen.matthiesen_core.common.api.discord.exceptions.DiscordWebhookException;
 import dev.matthiesen.matthiesen_core.common.core.discord.model.Embed;
-import dev.matthiesen.matthiesen_core.common.core.discord.model.EmbedBuilder;
 import dev.matthiesen.packwiz_ard.common.PackWizardCommon;
 import dev.matthiesen.packwiz_ard.common.config.PWConfig;
 import dev.matthiesen.packwiz_ard.common.shared.interfaces.IWebhookService;
@@ -39,7 +38,7 @@ public final class DiscordWebhookService implements IWebhookService {
     }
 
     public static Embed parseEventEmbed(PWConfig.DiscordEmbed embed) {
-        EmbedBuilder embedBuilder = new EmbedBuilder();
+        Embed.Builder embedBuilder = new Embed.Builder();
         if (embed.title != null)
             embedBuilder.withTitle(embed.title);
         if (embed.description != null)
@@ -48,10 +47,10 @@ public final class DiscordWebhookService implements IWebhookService {
             embedBuilder.withColor(embed.color);
         if (embed.timestamp != null)
             embedBuilder.withTimestamp(embed.timestamp.replace("%timestamp%", getCurrentTimestamp()));
-        List<Embed.EmbedField> fields = new ArrayList<>();
+        List<Embed.Field> fields = new ArrayList<>();
         if (embed.fields != null) {
             for (PWConfig.DiscordEmbedField field : embed.fields) {
-                Embed.EmbedField embedField = new Embed.EmbedField();
+                Embed.Field embedField = new Embed.Field();
                 if (field.name != null)
                     embedField.setName(field.name);
                 if (field.value != null)
