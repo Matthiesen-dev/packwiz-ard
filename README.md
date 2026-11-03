@@ -29,10 +29,6 @@ update notifications, and the ability to easily update the client-side mods to m
 - [Fabric API](https://modrinth.com/mod/fabric-api) (Fabric only)
 - [Forge Config API Port](https://modrinth.com/mod/forge-config-api-port) (Fabric only)
 
-### Optional Dependencies
-
-- [Matthiesen Core Webhooks](https://modrinth.com/project/XP5CfD30) - Used for sending Discord webhooks
-
 ## Pack Source Integration
 
 PackWiz-ard supports two updater backends:
